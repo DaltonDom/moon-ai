@@ -198,7 +198,7 @@ Agreed in the grilling session for [#8](https://github.com/DaltonDom/moon-ai/iss
   | London, more than 10 contracts | 3 ticks | 3 ticks |
   | Everything else (NY AM measured; NY PM and other windows reuse it) | 1 tick | 3 ticks |
 
-- **No volatility model.** Instead, every setup that passes the [setup testing protocol](https://github.com/DaltonDom/moon-ai/blob/claude/zealous-heisenberg-s13jgm/docs/design.md#setup-testing-protocol) (#16) is re-run once with **double slippage** (`slippage_multiplier = 2.0`) and goes forward only if it is still profitable.
+- **No volatility model.** Instead, every setup that passes the [setup testing protocol](#setup-testing-protocol) (#16) is re-run once with **double slippage** (`slippage_multiplier = 2.0`) and goes forward only if it is still profitable.
 - **Limit fills:** a limit (e.g. an FVG-edge entry or a target) fills only when price trades **1 tick through** it; a touch is not a fill.
 - **Same-bar stop and target:** the stop is assumed to fill first, unless 1-second bars for that minute (bought on demand, pennies) show the order. On the bar an entry fills, a touched stop counts and a touched target does not.
 - **Skipped sessions:** no new trades on CME holiday sessions, early-close sessions, or the session in which the continuous `.v.0` contract rolls (the previous session's levels belong to the old contract). No price adjustment across rolls.
@@ -213,7 +213,7 @@ Agreed in the grilling session for [#15](https://github.com/DaltonDom/moon-ai/is
 - **Recorded, not blocking:** other Chair speeches, ISM manufacturing and services (10:00), retail sales, jobless claims, JOLTS and consumer sentiment. They are ML features and the "news inside the killzone" trigger the 2022 model needs.
 - **Unscheduled events** (e.g. the Mar 2020 emergency cuts): not blocked in backtests, because live trading could not have known 15 minutes ahead. They carry `scheduled=false`, so results can be reported with and without those days. The daily stop is the protection.
 - **History records actual releases:** rows hold the time a release actually came out; cancelled releases (e.g. the Oct 2025 jobs report) have no row. Live and paper use the daily-refreshed official schedule; a release cancelled at short notice still blocks its planned time.
-- **Entries only:** the blackout blocks entries, not setups ([setup testing protocol](https://github.com/DaltonDom/moon-ai/blob/claude/zealous-heisenberg-s13jgm/docs/design.md#setup-testing-protocol), #16). A setup may form during it and enter from the end of the blackout.
+- **Entries only:** the blackout blocks entries, not setups ([setup testing protocol](#setup-testing-protocol), #16). A setup may form during it and enter from the end of the blackout.
 - **Open trades** are held through the news with their broker-side stop and target. A gap through the stop fills at the worse price in the simulator.
 - **Unfilled entry orders** are cancelled when a blackout starts. After it ends, the setup may place the order again if it is still valid (stop not hit, window still open).
 
