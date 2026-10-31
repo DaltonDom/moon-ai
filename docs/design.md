@@ -22,17 +22,50 @@ An autonomous, self-improving ICT trading bot for CME micro futures. Prove it on
 - Fixed ICT rules generate candidate trades.
 - An ML filter (LightGBM meta-labeler, triple-barrier labels) learns which candidates to take, using every logged factor.
 - **Retraining:** every weekend, followed by one week in shadow mode.
-- **Promotion:** a challenger is promoted only if both hold:
-  - it beats the current model on expectancy (in R) with a 95% CI excluding zero
-  - it passes the untouched holdout
+- **Promotion:** a challenger is promoted only if it beats the current model on expectancy (in R) and passes the untouched holdout. Exact rules are in [Model promotion and rollback](#model-promotion-and-rollback).
 - **No model promotions during an active evaluation.**
 - Proposed changes to ICT rules or risk parameters go to the user for approval. They are never self-applied.
+
+## Model promotion and rollback
+
+Decided in [#10](https://github.com/DaltonDom/moon-ai/issues/10). These numbers make "improving" verifiable, so they are fixed before any model trains.
+
+**Who competes**
+
+- **Rules-only is the starting champion** and the permanent fallback. The first ML model must beat it under the same test.
+- **Refresh vs challenger.**
+  - A *refresh* is the champion's recipe (features, hyperparameters, model type, training rules) retrained on the latest data. It is adopted automatically if its last-fold Brier score is no worse than the current version's, its shadow week is not below the current version's beyond bootstrap noise, and it is reproducible from its data, commit and parameters.
+  - A *challenger* is a changed recipe. It must win the full test below.
+- **One challenger at a time**; others queue. A challenger without enough evidence after its walk-forward history plus 12 shadow weeks is dropped as "no detectable difference", with the reason recorded. Every challenger tried counts as a trial in the DSR.
+
+**The test**
+
+- **Paired, on disagreements.** Both recipes score the same rule-generated candidates. Only candidates where one takes and the other skips are compared; each candidate's R comes from the engine's simulated trade, so a skipped trade's R is still known.
+- **Evidence is out-of-sample for both.** Both recipes are refit walk-forward on the same folds, each fold trained only on earlier data, and forward shadow decisions are added as they arrive. The shadow period must not show the challenger losing.
+- **Session-block bootstrap** of the paired R differences: one-sided 95% (challenger better), 10,000 resamples, resampling whole sessions.
+- **Minimum evidence:** 150 disagreements over at least 30 sessions. Below that, the result is "not enough evidence yet", never pass or fail. The 150 assumes a paired-difference spread of about 1.5R and a 0.3R edge at 80% power. The spread is re-measured once after the first model, and the minimum is recomputed and logged.
+- **Overfitting gates:** DSR > 0.95, counting every Optuna trial, every challenger and every holdout check, and PBO ≤ 0.25.
+
+**Holdout**
+
+- **Fixed and checked once per challenger.** The 6-month holdout is fixed at its creation date. Each challenger may check it once, and each check counts as a DSR trial. A new holdout is carved out on promotion or every 6 months, whichever comes first.
+- **Passing** means the paired mean R difference against the champion on the holdout is ≥ 0, and the challenger's net expectancy on the trades it takes is > 0R. Superiority is proven by the main test; the holdout guards against a fluke.
+
+**Promotion**
+
+- **Automatic** when superiority, holdout, DSR, PBO and the shadow check all pass, with a notification and a written report. Changes to ICT rules or risk parameters still need the user's approval.
+
+**Switching off, rollback and drift**
+
+- **Rolling check against rules-only:** the same paired bootstrap of the live model against rules-only on the last 60 paper sessions. If the model is worse at one-sided 95%, the bot falls back to rules-only automatically. If only the latest refresh is to blame (the previous version passes the same check), it rolls back to that version. The user is notified either way.
+- **Drift alarms (River ADWIN)** watch the per-candidate Brier score and the take rate. An alarm freezes refreshes and promotions, runs the rolling check immediately and notifies the user. An alarm never disables the model on its own.
+- **During an active evaluation:** no promotions and no refreshes. Falling back to rules-only is allowed; rolling back to an earlier model version is not.
 
 ## Verifiability
 
 - **Ground-truth set:** about 50 hand-checked days of setups. The user spot-checks them on TradingView. Detectors must match them exactly, or CI fails.
 - **Frozen replay:** a fixed historical period must reproduce identical results after every code change unless the change is intentional.
-- **Untouched holdout:** the most recent 6 months, used only for sign-off.
+- **Untouched holdout:** the most recent 6 months, used only for sign-off. How often it is checked and when it refreshes are in [Model promotion and rollback](#model-promotion-and-rollback).
 - **Versioned models:** each version is reproducible from its data, code commit and parameters.
 - **Overfitting checks:** every trial is logged, and reports show the Deflated Sharpe Ratio and the Probability of Backtest Overfitting.
 - **Mandatory baselines:** random entries in the same windows with the same stops and targets, and the rules with no ML filter. If the ML does not beat rules-only, it is disabled.
