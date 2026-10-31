@@ -1,0 +1,213 @@
+<title>Ground-Truth Review</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: day tabs on top; chart left, verdict cards right (stacked on phones). */
+:root {
+  --bg: #f6f7f5; --panel: #ffffff; --fg: #1c211f; --muted: #66706b; --line: #d9ddd9;
+  --bull: #138a72; --bear: #c7423b; --sweep: #c98a12; --fvg-bull: rgba(19,138,114,.16); --fvg-bear: rgba(199,66,59,.16);
+  --accent: #2c5d8f; --pool: #8a8f8c; --hl: rgba(44,93,143,.12);
+  --sans: "IBM Plex Sans", system-ui, sans-serif; --mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #121614; --panel: #1a1f1d; --fg: #e3e8e5; --muted: #95a09a; --line: #2c3431;
+  --bull: #3cc3a2; --bear: #ec6a62; --sweep: #e7ad3c; --fvg-bull: rgba(60,195,162,.18); --fvg-bear: rgba(236,106,98,.18);
+  --accent: #7fb0e3; --pool: #7d8580; --hl: rgba(127,176,227,.14); color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #121614; --panel: #1a1f1d; --fg: #e3e8e5; --muted: #95a09a; --line: #2c3431;
+  --bull: #3cc3a2; --bear: #ec6a62; --sweep: #e7ad3c; --fvg-bull: rgba(60,195,162,.18); --fvg-bear: rgba(236,106,98,.18);
+  --accent: #7fb0e3; --pool: #7d8580; --hl: rgba(127,176,227,.14); color-scheme: dark }
+body { background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 14px; }
+.wrap { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 16px 40px; max-width: 1400px; margin: 0 auto; display: grid; gap: 14px; }
+h1 { font-size: 20px; font-weight: 600; margin: 0; text-wrap: balance; }
+.sub { color: var(--muted); margin: 4px 0 0; max-width: 75ch; line-height: 1.5; }
+.proto { font: 500 11px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--bear); }
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.tabs button, .btn { font: 500 13px var(--sans); border: 1px solid var(--line); background: var(--panel); color: var(--fg); padding: 6px 12px; border-radius: 6px; cursor: pointer; }
+.tabs button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); box-shadow: inset 0 -2px 0 var(--accent); }
+.btn:focus-visible, .tabs button:focus-visible, .v:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.main { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 14px; align-items: start; }
+@media (max-width: 900px) { .main { grid-template-columns: minmax(0, 1fr); } }
+.chartbox { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px; min-width: 0; }
+.chartscroll { overflow-x: auto; }
+svg text { font: 10px var(--mono); fill: var(--muted); }
+.legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; color: var(--muted); padding: 6px 4px 0; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+.counts { font: 12px var(--mono); color: var(--muted); padding: 4px; font-variant-numeric: tabular-nums; }
+.side { display: grid; gap: 10px; min-width: 0; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; display: grid; gap: 6px; cursor: pointer; }
+.card.sel { border-color: var(--accent); background: linear-gradient(var(--hl), var(--hl)), var(--panel); }
+.card h3 { margin: 0; font-size: 14px; font-weight: 600; display: flex; gap: 8px; align-items: baseline; }
+.dir { font: 500 11px var(--mono); text-transform: uppercase; letter-spacing: .05em; }
+.dir.bull { color: var(--bull); } .dir.bear { color: var(--bear); }
+.facts { font: 12px var(--mono); color: var(--muted); line-height: 1.55; font-variant-numeric: tabular-nums; }
+.vrow { display: flex; gap: 6px; flex-wrap: wrap; }
+.v { font: 500 12px var(--sans); border: 1px solid var(--line); background: transparent; color: var(--fg); padding: 4px 10px; border-radius: 999px; cursor: pointer; }
+.v[aria-pressed="true"][data-v="agree"] { background: var(--bull); border-color: var(--bull); color: var(--panel); }
+.v[aria-pressed="true"][data-v="disagree"] { background: var(--bear); border-color: var(--bear); color: var(--panel); }
+.v[aria-pressed="true"][data-v="unsure"] { background: var(--sweep); border-color: var(--sweep); color: var(--panel); }
+textarea, input, select { font: 13px var(--sans); background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; width: 100%; box-sizing: border-box; }
+.missed { border-style: dashed; }
+.hint { font-size: 12px; color: var(--muted); margin: 0; line-height: 1.5; }
+.bottom { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 900px) { .bottom { grid-template-columns: minmax(0, 1fr); } }
+.bottom section { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; display: grid; gap: 8px; min-width: 0; }
+.bottom h2 { margin: 0; font-size: 14px; font-weight: 600; }
+pre { margin: 0; max-height: 220px; overflow: auto; font: 11px/1.5 var(--mono); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px; }
+.progress { font: 12px var(--mono); color: var(--muted); }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="proto">Prototype · ticket #11 · throwaway</div>
+    <h1>Ground-truth review: MNQ 1-minute, 07:00–11:30 ET</h1>
+    <p class="sub">Each card is one detected chain: liquidity sweep → market structure shift → displacement candle with a fair value gap, using today's default parameters. Mark each one, then click any candle to add a setup the detectors missed. Nothing is saved; copy the verdicts before you close the page.</p>
+  </header>
+  <nav class="tabs" id="tabs"></nav>
+  <div class="main">
+    <div class="chartbox">
+      <div class="chartscroll"><svg id="chart" role="img" aria-label="Candle chart with detections"></svg></div>
+      <div class="legend">
+        <span><i style="background:var(--sweep)"></i>sweep (wick past level)</span>
+        <span><i style="background:var(--bear)"></i>/<i style="background:var(--bull)"></i>MSS: broken swing → breaking bar</span>
+        <span><i style="background:var(--fvg-bear);border:1px solid var(--bear)"></i>displacement FVG</span>
+        <span><i style="background:var(--pool)"></i>pools known at 07:00 (prior day, Asia, London)</span>
+        <label><input type="checkbox" id="raw" style="width:auto"> show every raw FVG and sweep</label>
+      </div>
+      <div class="counts" id="counts"></div>
+    </div>
+    <div class="side" id="side"></div>
+  </div>
+  <div class="bottom">
+    <section>
+      <h2>Your verdicts</h2>
+      <div class="progress" id="progress"></div>
+      <pre id="json"></pre>
+      <div class="vrow"><button class="btn" id="copy">Copy verdicts</button></div>
+      <p class="hint">Paste the copied JSON as a comment on the ticket. That file becomes the ground-truth set CI checks against.</p>
+    </section>
+    <section>
+      <h2>Same chains on TradingView</h2>
+      <p class="hint">Open a 1-minute MNQ1! chart, paste this into the Pine editor and add it to the chart. It draws the same sweeps, MSS lines and FVG boxes for this day.</p>
+      <pre id="pine"></pre>
+      <div class="vrow"><button class="btn" id="copypine">Copy Pine script</button></div>
+    </section>
+  </div>
+</div>
+
+<script>
+const DATA = /*DATA*/null;
+const state = { day: 0, sel: null, raw: false, verdicts: {}, missed: [] };
+const $ = (id) => document.getElementById(id);
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const hm = (t) => t.slice(11, 16);
+
+function render() {
+  const D = DATA[state.day];
+  $("tabs").innerHTML = DATA.map((d, i) => `<button aria-pressed="${i === state.day}" data-i="${i}">${d.day} · ${d.chains.length} chains</button>`).join("");
+  drawChart(D); drawSide(D);
+  const c = D.counts;
+  $("counts").textContent = `raw in window: ${c.swing_sweeps} swing sweeps · ${c.pool_sweeps} pool sweeps · ${c.mss} MSS · ${c.fvgs} FVGs · ${c.displacements} displacements → ${D.chains.length} chains to check`;
+  $("pine").textContent = D.pine;
+  const out = { schema: "ground-truth-prototype/1", symbol: "MNQ.v.0", window_et: "07:00-11:30",
+    reviewed: Object.entries(state.verdicts).map(([id, v]) => ({ id, ...v })),
+    missed: state.missed };
+  $("json").textContent = JSON.stringify(out, null, 1);
+  const total = DATA.reduce((n, d) => n + d.chains.length, 0);
+  const done = Object.values(state.verdicts).filter((v) => v.verdict).length;
+  $("progress").textContent = `${done} of ${total} chains marked · ${state.missed.length} missed setups added`;
+}
+
+function drawChart(D) {
+  const C = D.candles, W = Math.max(C.length * 5 + 70, 600), H = 460, top = 10, bot = 24, right = 62;
+  let lo = Infinity, hi = -Infinity;
+  C.forEach((c) => { lo = Math.min(lo, c.l); hi = Math.max(hi, c.h); });
+  const pad = (hi - lo) * 0.04; lo -= pad; hi += pad;
+  const y = (p) => top + (hi - p) / (hi - lo) * (H - top - bot);
+  const idx = Object.fromEntries(C.map((c, i) => [c.t, i]));
+  const x = (t) => (idx[t] ?? (t < C[0].t ? -1 : C.length)) * 5 + 3;
+  const s = [];
+  const step = (hi - lo) > 150 ? 50 : 20;
+  for (let p = Math.ceil(lo / step) * step; p < hi; p += step)
+    s.push(`<line x1="0" x2="${W - right}" y1="${y(p)}" y2="${y(p)}" stroke="${css("--line")}" stroke-width="1"/><text x="${W - right + 4}" y="${y(p) + 3}">${p}</text>`);
+  C.forEach((c, i) => { if (c.t.endsWith(":00") && Number(c.t.slice(14, 16)) % 30 === 0)
+    s.push(`<line x1="${i * 5 + 3}" x2="${i * 5 + 3}" y1="${top}" y2="${H - bot}" stroke="${css("--line")}"/><text x="${i * 5 - 10}" y="${H - 8}">${hm(c.t)}</text>`); });
+  D.context.forEach((p) => { if (p.price > lo && p.price < hi)
+    s.push(`<line x1="0" x2="${W - right}" y1="${y(p.price)}" y2="${y(p.price)}" stroke="${css("--pool")}" stroke-dasharray="4 3"/><text x="4" y="${y(p.price) - 3}">${p.name} ${p.price}</text>`); });
+  if (state.raw) {
+    D.raw.fvgs.forEach((g) => s.push(`<rect x="${x(g.t)}" y="${y(g.high)}" width="25" height="${Math.max(1, y(g.low) - y(g.high))}" fill="${css(g.dir === "bull" ? "--fvg-bull" : "--fvg-bear")}"/>`));
+    D.raw.sweeps.forEach((w) => s.push(`<circle cx="${x(w.t)}" cy="${y(w.level)}" r="2" fill="${css("--sweep")}"/>`));
+  }
+  D.chains.forEach((ch, n) => {
+    const col = css(ch.direction === "bull" ? "--bull" : "--bear"), sel = state.sel === ch.id;
+    if (sel) s.push(`<rect x="${x(ch.sweeps[0].t) - 6}" y="${top}" width="${x(ch.mss.t) - x(ch.sweeps[0].t) + 50}" height="${H - top - bot}" fill="${css("--hl")}"/>`);
+    const f = ch.fvg;
+    s.push(`<rect x="${x(f.t)}" y="${y(f.high)}" width="50" height="${Math.max(1, y(f.low) - y(f.high))}" fill="${css(ch.direction === "bull" ? "--fvg-bull" : "--fvg-bear")}" stroke="${col}" stroke-width="${sel ? 1.5 : .8}"/>`);
+    s.push(`<line x1="${Math.max(0, x(ch.mss.swing_t))}" x2="${x(ch.mss.t) + 2}" y1="${y(ch.mss.price)}" y2="${y(ch.mss.price)}" stroke="${col}" stroke-width="${sel ? 2.5 : 1.5}"/>`);
+    s.push(`<text x="${x(ch.mss.t) + 6}" y="${y(ch.mss.price) + (ch.direction === "bear" ? 12 : -4)}" style="fill:${col};font-weight:500">#${n + 1}</text>`);
+    ch.sweeps.forEach((w) => s.push(`<line x1="${x(w.t) - 6}" x2="${x(w.t) + 8}" y1="${y(w.level)}" y2="${y(w.level)}" stroke="${css("--sweep")}" stroke-width="2"/><circle cx="${x(w.t) + 1}" cy="${y(w.extreme)}" r="2.5" fill="${css("--sweep")}"/>`));
+  });
+  C.forEach((c, i) => {
+    const col = css(c.c >= c.o ? "--bull" : "--bear"), X = i * 5 + 1;
+    s.push(`<g data-t="${c.t}" style="cursor:crosshair"><rect x="${X - 1}" y="${top}" width="5" height="${H - top - bot}" fill="transparent"/><line x1="${X + 1.5}" x2="${X + 1.5}" y1="${y(c.h)}" y2="${y(c.l)}" stroke="${col}"/><rect x="${X}" y="${y(Math.max(c.o, c.c))}" width="3" height="${Math.max(1, Math.abs(y(c.o) - y(c.c)))}" fill="${col}"/></g>`);
+  });
+  state.missed.filter((m) => m.t.startsWith(D.day)).forEach((m) => {
+    const c = C[idx[m.t]]; if (c) s.push(`<text x="${x(m.t) - 3}" y="${y(c.h) - 6}" style="fill:${css("--accent")};font-size:13px">▼</text>`);
+  });
+  const svg = $("chart"); svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.setAttribute("width", W); svg.setAttribute("height", H);
+  svg.innerHTML = s.join("");
+}
+
+function drawSide(D) {
+  const cards = D.chains.map((ch, n) => {
+    const v = state.verdicts[ch.id] || {};
+    const sw = ch.sweeps.map((w) => `${hm(w.t)} swept ${w.source} ${w.kind || ""} ${w.level} (to ${w.extreme})`).join("<br>");
+    return `<div class="card ${state.sel === ch.id ? "sel" : ""}" data-id="${ch.id}">
+      <h3>#${n + 1} <span class="dir ${ch.direction}">${ch.direction}</span> MSS ${hm(ch.mss.t)}</h3>
+      <div class="facts">${sw}<br>${hm(ch.mss.t)} closed through swing ${ch.mss.price} (from ${hm(ch.mss.swing_t)})<br>${hm(ch.disp.t)} displacement body ${ch.disp.body} vs ATR ${ch.disp.atr}<br>FVG ${ch.fvg.low}–${ch.fvg.high}</div>
+      <div class="vrow">${["agree", "disagree", "unsure"].map((k) => `<button class="v" data-v="${k}" aria-pressed="${v.verdict === k}">${k}</button>`).join("")}</div>
+      ${v.verdict && v.verdict !== "agree" ? `<input id="note-${ch.id}" placeholder="What's wrong? e.g. not a real swing, sweep too small, wrong FVG" value="${(v.note || "").replace(/"/g, "&quot;")}">` : ""}
+    </div>`;
+  }).join("");
+  const missed = state.missed.filter((m) => m.t.startsWith(D.day)).map((m, k) => `<div class="card missed">
+      <h3>Missed · ${hm(m.t)}</h3>
+      <select id="mk-${m.t}" data-t="${m.t}"><option value="">what did you see?</option>${["full setup", "sweep", "MSS", "FVG", "displacement"].map((o) => `<option ${m.kind === o ? "selected" : ""}>${o}</option>`).join("")}</select>
+      <input id="mn-${m.t}" data-t="${m.t}" placeholder="note" value="${(m.note || "").replace(/"/g, "&quot;")}">
+      <button class="btn" data-del="${m.t}">Remove</button></div>`).join("");
+  $("side").innerHTML = cards + missed + `<p class="hint">Click a candle on the chart to add a setup the detectors missed.</p>`;
+}
+
+document.addEventListener("click", (e) => {
+  const tab = e.target.closest("#tabs button");
+  if (tab) { state.day = +tab.dataset.i; state.sel = null; return render(); }
+  const v = e.target.closest(".v");
+  if (v) { const id = v.closest(".card").dataset.id; const cur = state.verdicts[id] || {};
+    state.verdicts[id] = { ...cur, verdict: cur.verdict === v.dataset.v ? null : v.dataset.v }; state.sel = id; return render(); }
+  const del = e.target.closest("[data-del]");
+  if (del) { state.missed = state.missed.filter((m) => m.t !== del.dataset.del); return render(); }
+  const card = e.target.closest(".card[data-id]");
+  if (card && !e.target.closest("input")) { state.sel = card.dataset.id; return render(); }
+  const g = e.target.closest("g[data-t]");
+  if (g && !state.missed.some((m) => m.t === g.dataset.t)) { state.missed.push({ t: g.dataset.t, kind: "", note: "" }); render(); }
+});
+document.addEventListener("change", (e) => {
+  if (e.target.id === "raw") { state.raw = e.target.checked; return render(); }
+  const t = e.target.dataset.t; const m = state.missed.find((x) => x.t === t);
+  if (m && e.target.tagName === "SELECT") { m.kind = e.target.value; render(); }
+});
+document.addEventListener("input", (e) => {
+  if (e.target.id.startsWith("note-")) { const id = e.target.id.slice(5); state.verdicts[id].note = e.target.value; }
+  else if (e.target.id.startsWith("mn-")) { const m = state.missed.find((x) => x.t === e.target.dataset.t); if (m) m.note = e.target.value; }
+  else return;
+  const D = DATA[state.day];
+  $("json").textContent = JSON.stringify({ schema: "ground-truth-prototype/1", symbol: "MNQ.v.0", window_et: "07:00-11:30",
+    reviewed: Object.entries(state.verdicts).map(([id, v]) => ({ id, ...v })), missed: state.missed }, null, 1);
+});
+function copy(btn, text) {
+  const done = () => { const o = btn.textContent; btn.textContent = "Copied"; setTimeout(() => (btn.textContent = o), 1500); };
+  navigator.clipboard.writeText(text).then(done, () => { const r = document.createRange(); r.selectNodeContents(btn.closest("section").querySelector("pre")); getSelection().removeAllRanges(); getSelection().addRange(r); btn.textContent = "Selected, press Ctrl/Cmd+C"; });
+}
+$("copy").onclick = (e) => copy(e.target, $("json").textContent);
+$("copypine").onclick = (e) => copy(e.target, $("pine").textContent);
+render();
+</script>
