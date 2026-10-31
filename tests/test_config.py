@@ -74,3 +74,10 @@ def test_instrument_spec_resolves_continuous_symbols():
 
     assert cfg.instrument("MNQ.v.0").point_value == 2.0
     assert cfg.instrument("ES.v.0").point_value == 50.0
+
+
+def test_news_blackout_defaults_block_entries_only():
+    cfg = load_config()
+    assert cfg.ict.news_handling == "blocks_entry"
+    assert cfg.ict.news_blackout_minutes == 15
+    assert cfg.ict.fomc_blackout_end == time(15, 30)

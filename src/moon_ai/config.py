@@ -116,7 +116,13 @@ class IctConfig:
         "midnight_open",
         "none",
     ] = "prev_day_range"
-    news_handling: Literal["blocks_setup", "blocks_entry"] = "blocks_setup"
+    # News blackout (tickets #15, #16; design.md "News blackout"). The blackout
+    # blocks entries only; "blocks_setup" is a rescue-pass variant.
+    news_handling: Literal["blocks_setup", "blocks_entry"] = "blocks_entry"
+    news_blackout_minutes: int = 15  # before and after each blocking event
+    # On FOMC statement days the blackout runs from 15 minutes before the
+    # statement to this time (end of the press conference).
+    fomc_blackout_end: time = time(15, 30)
 
 
 @dataclass(frozen=True)
