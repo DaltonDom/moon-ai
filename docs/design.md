@@ -24,7 +24,7 @@ Decided in [#16](https://github.com/DaltonDom/moon-ai/issues/16).
 
 **Pre-registration**
 
-- Each setup has one locked default config in a committed `defaults.yaml`, written before any backtest runs. The commit is the pre-registration record.
+- Each setup has one locked default config in a committed `config/defaults.toml`, written before any backtest runs. The commit is the pre-registration record.
 - Only the defaults are tested first. Every run, defaults included, is logged as a trial for the Deflated Sharpe Ratio (DSR) and the Probability of Backtest Overfitting.
 - **Go-forward bar.** A setup goes forward only if all three hold on the in-sample period (the 6-month holdout stays untouched):
   1. Its mean R per trade beats the random-entry baseline (≈1,000 runs with the same windows, stops, targets and direction mix), and the bootstrap 95% CI of the difference excludes zero.
@@ -82,7 +82,7 @@ Decided in [#9](https://github.com/DaltonDom/moon-ai/issues/9). Terms are define
 
 - **Triple barrier on the candidate's own plan.** The barriers are the candidate's planned stop and target, plus its setup's time-out. Label = 1 if the target is hit first, otherwise 0, so a time-out counts as a loss. Net R is stored next to the label.
 - **Labels come from the engine's own simulated trade,** with the same fills, costs and same-bar rule as the backtest ([#8](https://github.com/DaltonDom/moon-ai/issues/8)), so a label can never disagree with the journal.
-- **Time-outs (pre-registered in `defaults.yaml`):**
+- **Time-outs (pre-registered in `config/defaults.toml`):**
   - 15:55 ET for NY AM SB, NY PM SB, OTE pullback and the 2022 model
   - 09:30 ET for London sweep-and-reverse, whose one variant is 16:00
 - **Labels ignore portfolio state.** Each candidate is labelled as if it were taken on its own, including `skipped:cap` candidates and those after the daily stop. Unfilled limit entries get no label and are left out of training. A candidate whose entry falls in the news blackout is labelled only if it still qualifies from +15 minutes.
@@ -237,7 +237,7 @@ Agreed in the grilling session for [#13](https://github.com/DaltonDom/moon-ai/is
 
 "Good" or "bad" is Claude's judgement of whether the trade matched the setup's rules in spirit, and it must cite the feature or rule behind it.
 
-**Inputs:** the full journal entry (plan, fills, rule checks, ML probability, feature vector, MAE/MFE, R and exit reason), the setup's pinned rules from `defaults.yaml`, and one chart image of the setup window and the trade.
+**Inputs:** the full journal entry (plan, fills, rule checks, ML probability, feature vector, MAE/MFE, R and exit reason), the setup's pinned rules from `config/defaults.toml`, and one chart image of the setup window and the trade.
 
 **Output, per trade** (stored with the trade in the journal, validated against a fixed schema; an invalid response is rejected, not stored):
 
@@ -246,7 +246,7 @@ Agreed in the grilling session for [#13](https://github.com/DaltonDom/moon-ai/is
 | `bucket` | one of the five above |
 | `code_flags` | copied from the code's checks; read-only for Claude |
 | `summary` | 2–3 plain-English sentences |
-| `reasons` | list; each cites a feature by name and value (e.g. `sweep_depth_ticks = 3`) or a rule in `defaults.yaml`. Only features present in the journal entry may be cited |
+| `reasons` | list; each cites a feature by name and value (e.g. `sweep_depth_ticks = 3`) or a rule in `config/defaults.toml`. Only features present in the journal entry may be cited |
 | `setup_quality` | `good` / `bad`, with confidence `low` / `medium` / `high` |
 | `execution_notes` | fills or slippage worth noting, or empty |
 | `follow_up` | optional idea worth testing; it becomes a proposal only if the weekly report picks it up |
@@ -304,11 +304,91 @@ Everything runs on the user's **Mac** wherever possible. It moves to the user's 
   - Silence counts as allowed.
   - Where the rules explicitly require a step (for example, bot approval), flag it to the user, who decides.
 
+## Code layout and commands
+
+Decided in [Repo layout, engine interfaces and the Mac dev setup](https://github.com/DaltonDom/moon-ai/issues/23).
+
+**Packages** (`src/moon_ai/`, existing modules kept as they are):
+
+| Package | Holds |
+|---|---|
+| `bars.py`, `sessions.py`, `config.py`, `engine.py`, `broker.py` | existing foundation |
+| `data/` | Databento download (exists), the Parquet bar store and `ParquetBarFeed`, 1-second bar lookup, CME holiday / early-close / roll calendar, `news_events.csv` builder and loader, degraded-day list |
+| `ict/` | ICT primitives (exist) |
+| `setups/` | one module per setup plus a registry; each setup turns primitives into `Candidate`s |
+| `trader.py` | the one `Strategy`: setups → dedupe by priority → news blackout → ML gate → hard risk rules → bracket orders |
+| `risk.py` | hard risk rules (session cap, daily stop, flat time, London minimum stop); the ML can't bypass it |
+| `journal/` | storage and schema (see the journal ticket) |
+| `backtest/` | runner, random-entry and rules-only baselines, statistics (DSR, PBO, bootstrap), report card |
+| `ml/` | features, labels, training, model registry (champion/challenger), drift monitors |
+| `review/` | Claude trade reviews and the weekly report |
+| `nightly/` | the nightly job and its launchd install (see the nightly-run ticket) |
+| `dashboard/` | FastAPI app plus the built React files, so the Mac needs no Node |
+| `watcher/` | the monthly ICT watcher |
+| `bridge/` | Phase 3 Python side of the NinjaTrader link; the C# add-on lives in `ninjatrader/` at the repo root |
+
+**Interfaces.** The existing `BarFeed`, `Broker`, `Strategy` and `Journal` protocols stay. What changes:
+
+- `BarFeed`: `ParquetBarFeed` serves both backtest and nightly replay; a live feed comes in Phase 3.
+- `Broker`: `SimBroker` now, and a NinjaTrader broker in Phase 3 behind the same protocol.
+- New `Setup` protocol: `scan(ctx) -> list[Candidate]`. A setup never places orders.
+- A `Candidate` carries:
+  - setup id, side, entry type and price, stop, target, time-out
+  - rule results, and the feature vector frozen at placement
+
+  The `Trader` decides what becomes an order. That makes every skip (cap, blackout, ML, London minimum stop) a journaled candidate.
+- No module reads the wall clock. Time is `ctx.now` from the bar feed, so backtest and replay behave the same.
+
+**Files on disk**
+
+- **Committed:**
+  - `config/defaults.toml`: the pre-registered setup defaults, read by the existing strict TOML loader, so there is no YAML dependency
+  - `reports/weekly/`
+  - `data_public/news_events.csv`: public government release times
+  - `tests/fixtures/`: synthetic bars, plus the ground-truth days' real 1-minute bars and verdicts
+  - `tests/frozen/expected.json`: the frozen-replay results
+- **Ground-truth and frozen-replay bars are committed** as small Parquet slices so CI can run both checks. This is allowed only because the repo is private and the use is personal; remove them before the repo is ever made public.
+- **Not committed, under the gitignored `data/` in the repo folder on the Mac:**
+  - `bars/` (exists) and `bars_1s/`
+  - `journal/`
+  - `models/<model id>/`
+  - `runs/<run id>/`, holding each backtest's trades, report card and charts
+  - `logs/`
+
+**Tests**
+
+- unit tests per module
+- a look-ahead test for every setup, like the existing one for primitives
+- the ground-truth check against the user's marked days, both ways
+- the frozen replay: a fixed four-week window whose trades must match `tests/frozen/expected.json` exactly. An intentional change updates the file in the same commit, so the diff shows what moved.
+
+**Commands the user runs on the Mac** (all `uv run moon-ai …`, from the repo folder):
+
+| Command | Does |
+|---|---|
+| `doctor` | checks Python, keys, data, disk and the nightly job, in plain language, and says what to fix |
+| `download …` | exists; buys and stores bars |
+| `backtest <setup>` / `backtest --all` | runs the full protocol and opens the report card in the browser |
+| `review-days <setup>` | opens the ground-truth review page |
+| `verify` | runs the tests plus the frozen replay on the real data |
+| `dashboard` | serves the dashboard at `http://localhost:8000` |
+| `train` | trains the ML filter once the data minimums are met |
+| `nightly install / status / run` | defined in the nightly-run ticket |
+
+**Dev setup on a Mac:**
+
+```bash
+uv sync
+uv run moon-ai doctor
+```
+
+uv supplies Python 3.12. Keys live in `~/.config/moon-ai/.env`, as the Databento key already does.
+
 ## Stack
 
 - **Engine:** a lean custom Python event loop on Polars + `databento`, behind `BarFeed` / `Broker` / `Journal` interfaces. When a stop and a target are both hit in the same bar, the stop is assumed to fill first unless 1-second bars resolve which came first. NautilusTrader is re-evaluated at Phase 3 ([engine-choice research](https://github.com/DaltonDom/moon-ai/blob/research/engine-choice/docs/research/engine-choice.md)).
 - **ML:** LightGBM; Optuna for tuning; River for drift detection.
-- **Live connection:** our own NinjaTrader 8 add-on passes bars and orders between the Python engine and NinjaTrader on the Windows PC. NinjaTrader connects to the firm over CQG.
+- **Live connection:** our own NinjaTrader 8 add-on passes bars and orders between the Python engine and NinjaTrader on the Windows PC. NinjaTrader connects to the firm over the firm's own connection: CQG/Tradovate for Lucid, Rithmic for Bulenox, Tradovate for MyFundedFutures ([NinjaTrader automation research](https://github.com/DaltonDom/moon-ai/blob/claude/nifty-tesla-vsgsoz/docs/research/ninjatrader-automation.md)).
 - **Data:** Databento `GLBX.MDP3`.
 - **Dashboard:** FastAPI + React.
 - **Charts:** TradingView for viewing and verification.
