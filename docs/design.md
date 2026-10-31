@@ -181,12 +181,7 @@ Decided in [#10](https://github.com/DaltonDom/moon-ai/issues/10). These numbers 
   - planned entry, stop and target
   - fills and slippage
   - MAE/MFE, R result and exit reason
-- **Claude review per trade,** one of four buckets:
-  - good setup / good result
-  - good setup / unlucky loss
-  - rule break or execution error
-  - bad setup the filter should have rejected
-- Weekly report.
+- **Claude review per trade** and a weekly report (see [Claude trade review](#claude-trade-review)).
 - **Dashboard:** win rate, profit factor, expectancy, average R, drawdown, Sharpe/Sortino, per setup and per model version.
 - **Claude never places trades or changes rules.**
 
@@ -221,6 +216,54 @@ Agreed in the grilling session for [#15](https://github.com/DaltonDom/moon-ai/is
 - **Entries only:** the blackout blocks entries, not setups ([setup testing protocol](https://github.com/DaltonDom/moon-ai/blob/claude/zealous-heisenberg-s13jgm/docs/design.md#setup-testing-protocol), #16). A setup may form during it and enter from the end of the blackout.
 - **Open trades** are held through the news with their broker-side stop and target. A gap through the stop fills at the worse price in the simulator.
 - **Unfilled entry orders** are cancelled when a blackout starts. After it ends, the setup may place the order again if it is still valid (stop not hit, window still open).
+
+## Claude trade review
+
+Agreed in the grilling session for [#13](https://github.com/DaltonDom/moon-ai/issues/13), 2026-10-31.
+
+**Scope and role**
+
+- Claude reviews **every taken trade** individually. Skipped candidates (ML skip, `skipped:cap`, news blackout, London minimum stop) get no per-candidate review; the weekly report shows them as code-computed totals (count, how many would have won, net R from their labels).
+- **Reviews are commentary, never inputs.** Buckets and opinions never feed ML training, labels or model promotion. They are for the user to read and for proposals, which must then pass a real backtest.
+- **Code finds the mistakes, Claude explains them.** Code computes `code_flags` deterministically: fill worse than the slippage assumption, a failed rule check, a rejected order, a missing broker-side stop or target. Claude cannot override them.
+
+**Buckets** (exactly one per trade)
+
+1. Rule break or execution error — set whenever `code_flags` is non-empty, checked first.
+2. Good setup, won.
+3. Good setup, unlucky loss.
+4. Bad setup, lucky win.
+5. Bad setup, lost — the filter should have rejected it.
+
+"Good" or "bad" is Claude's judgement of whether the trade matched the setup's rules in spirit, and it must cite the feature or rule behind it.
+
+**Inputs:** the full journal entry (plan, fills, rule checks, ML probability, feature vector, MAE/MFE, R and exit reason), the setup's pinned rules from `defaults.yaml`, and one chart image of the setup window and the trade.
+
+**Output, per trade** (stored with the trade in the journal, validated against a fixed schema; an invalid response is rejected, not stored):
+
+| Field | Content |
+|---|---|
+| `bucket` | one of the five above |
+| `code_flags` | copied from the code's checks; read-only for Claude |
+| `summary` | 2–3 plain-English sentences |
+| `reasons` | list; each cites a feature by name and value (e.g. `sweep_depth_ticks = 3`) or a rule in `defaults.yaml`. Only features present in the journal entry may be cited |
+| `setup_quality` | `good` / `bad`, with confidence `low` / `medium` / `high` |
+| `execution_notes` | fills or slippage worth noting, or empty |
+| `follow_up` | optional idea worth testing; it becomes a proposal only if the weekly report picks it up |
+| `model`, `prompt_version`, `cost_usd` | traceability and the monthly cap |
+
+**Model, schedule and cost**
+
+- Claude Opus 5.5 through the Message Batches API (half price). Per-trade reviews go out as one batch right after the nightly paper replay and are back before the next session.
+- The weekly report runs **Saturday**, before the weekend retraining, so proposals are queued before a new model's shadow week. It includes last week's shadow-model comparison.
+- Expected cost about $1–3 a month. **Hard cap $10 a month:** when reached, reviews stop and the user is alerted.
+- **Failures** (API error, invalid output, refusal, cap reached): the trade is marked `review: pending` and retried the next night, up to 3 times, then `review: failed` and listed in the weekly report. Reviews never block trading, the paper replay or retraining.
+
+**Weekly report and proposals**
+
+- A Markdown file in the repo (`reports/weekly/<ISO year>-W<week>.md`), also shown on the dashboard: metrics per setup and model version, bucket counts, skipped-candidate totals, the 3–5 most instructive trades, failed reviews, and proposals.
+- **At most 3 proposals a week,** each opened as a GitHub issue labelled `proposal`: the exact parameter or rule change, the evidence, and the test that would decide it.
+- **Two approvals.** The user adds `approved` to run the test, which is logged as a trial under the setup testing protocol (#16). The rule changes only if the test passes **and** the user approves the result.
 
 ## Hard risk rules (ML cannot override)
 
