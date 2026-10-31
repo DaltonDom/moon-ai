@@ -76,6 +76,60 @@ Decided in [#16](https://github.com/DaltonDom/moon-ai/issues/16).
 - **No model promotions during an active evaluation.**
 - Proposed changes to ICT rules or risk parameters go to the user for approval. They are never self-applied.
 
+## ML filter: features and labels
+
+Decided in [#9](https://github.com/DaltonDom/moon-ai/issues/9). Terms are defined in [GLOSSARY.md](../GLOSSARY.md).
+
+**Labels**
+
+- **Triple barrier on the candidate's own plan.** The barriers are the candidate's planned stop and target, plus its setup's time-out. Label = 1 if the target is hit first, otherwise 0, so a time-out counts as a loss. Net R is stored next to the label.
+- **Labels come from the engine's own simulated trade,** with the same fills, costs and same-bar rule as the backtest ([#8](https://github.com/DaltonDom/moon-ai/issues/8)), so a label can never disagree with the journal.
+- **Time-outs (pre-registered in `defaults.yaml`):**
+  - 15:55 ET for NY AM SB, NY PM SB, OTE pullback and the 2022 model
+  - 09:30 ET for London sweep-and-reverse, whose one variant is 16:00
+- **Labels ignore portfolio state.** Each candidate is labelled as if it were taken on its own, including `skipped:cap` candidates and those after the daily stop. Unfilled limit entries get no label and are left out of training. A candidate whose entry falls in the news blackout is labelled only if it still qualifies from +15 minutes.
+
+**Features**
+
+- **Frozen at decision time:** the close of the bar that completes the setup and places the order, not the fill.
+- **Feature set v1.** Sizes are in ticks and as multiples of ATR(14), never absolute prices.
+  - **Context:** setup type, killzone, minutes since the window opened, time of day, day of week.
+  - **Bias:** each of the five bias proxies as aligned / against / none relative to the trade direction, and how many agree.
+  - **Setup geometry:** sweep depth, FVG size, displacement body and range, stop distance, distance to target, planned R:R.
+  - **Liquidity:** distance to the nearest opposing level by source (swing, Asian, prior day), and which kind of level was swept.
+  - **SMT:** an MNQ vs MES divergence flag in the setup window, using the same swing rules.
+  - **Volatility regime:**
+    - 1-minute ATR(14) ÷ its 20-session median at the same time of day
+    - prior-day range ÷ daily ATR(14)
+    - daily ATR percentile over the trailing 252 days
+  - **News:** minutes to the next and since the last scheduled high-impact event, plus event-day flags (FOMC / CPI / NFP / other).
+  - **Prior sessions:** Asian, London and prior-day ranges in ATR, and where the entry sits in the prior-day range (premium/discount %).
+  - **Volume:** displacement-bar volume ÷ the 20-session median for that minute.
+- **Not features:** today's P&L, the earlier trade's result and how many trades are already taken. That is portfolio state, which the risk rules handle.
+- **Versioned.** Any change to the feature set ships as a new model version and counts as a trial.
+- **Banned (look-ahead):**
+  - anything known after decision time: fill, slippage, MAE/MFE, bars to fill, exit and outcome fields
+  - unconfirmed swings
+  - the current session's or day's high, low and range, and today's daily bar
+  - ATR that includes the forming bar
+  - unscheduled news events
+  - released economic values or surprises
+  - absolute price levels, because unadjusted rolls make them jump
+- **Enforced in CI.** The feature builder only receives primitives whose `known_at` is at or before decision time. A truncation test extends the ICT look-ahead test to the whole feature vector: cutting the bars at decision time must give an identical vector.
+
+**Training**
+
+- **One pooled model** across all go-forward setups, with setup type as a feature, trained only on setups that passed the go-forward bar. A per-setup split is a challenger like any other.
+- **Minimum data:** at least 500 labelled candidates pooled, and at least 100 for each included setup. Below that, setups trade rules-only and the ML filter is off. The holdout never enters training.
+- **Cross-validation:** walk-forward folds that purge any candidate whose entry-to-exit window overlaps a test fold, plus a 1-session embargo after each test fold.
+- **Overlapping candidates:** each setup's candidate is its own row. Rows are weighted by average uniqueness (López de Prado, ch. 4): a candidate overlapping k others gets a weight of about 1/k.
+
+**Take or skip**
+
+- Take a candidate when its expected R is above zero, which means `p > 1 / (1 + net R:R)`, with p calibrated on out-of-fold predictions by isotonic regression.
+- The cut comes from each candidate's own R:R, so there is no tuned threshold.
+- The probability never changes position size; risk stays at 1%.
+
 ## Verifiability
 
 - **Ground-truth set:** about 50 hand-checked days of setups. The user spot-checks them on TradingView. Detectors must match them exactly, or CI fails.
