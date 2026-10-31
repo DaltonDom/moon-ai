@@ -73,7 +73,7 @@ Everything runs on the user's **Mac** wherever possible. It moves to the user's 
 | Phase | What | Where | Cost |
 |---|---|---|---|
 | 1. Build & backtest | Engine, detectors, ML, journal, dashboard | Mac | $0 (Databento $125 free credit) |
-| 2. Paper | Nightly forward replay of that day's CME 1-minute data, as if live | Mac | ~$0–5/mo (estimate) |
+| 2. Paper | Nightly forward replay of the previous session's CME 1-minute data (T+1; data under 24h old needs Databento's $199/mo plan), as if live | Mac | ~$0.42/mo |
 | 3. Connection test | 14 days with real-time prices on NinjaTrader's free trial, through our NinjaScript bridge | Windows PC | $0 |
 | 4. Evaluation | One prop-firm evaluation | Windows PC | ~$110 per attempt |
 | 5. Funded | One funded account; copying across accounts only after 3 months meeting the bar | Windows PC | $0 + firm fees |
