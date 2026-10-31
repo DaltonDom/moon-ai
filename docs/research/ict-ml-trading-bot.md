@@ -280,6 +280,13 @@ Pattern: **Parquet + DuckDB for research**, **SQLite (→ Postgres later) for th
 
 ### 7.4 Prop-firm automation rules
 
+> **Correction (2026-10-31):** see [`prop-firms-and-order-routing.md`](./prop-firms-and-order-routing.md) for the full prop-firm study. Updates to the items below and in Section 2.1:
+> - **Apex:** now confirmed on Apex's own help center (no longer UNVERIFIED), and it is stricter than stated: "The use of automation is strictly prohibited on all account types", which covers evaluations too, not only funded accounts ([Prohibited Activities](https://support.apextraderfunding.com/hc/en-us/articles/40463668243099-Prohibited-Activities)).
+> - **Topstep:** in addition to the API being sim-only on Live Funded accounts, "the use of VPS, VPNs, and remote servers is prohibited", and "all trading activity must originate from your personal device". A cloud-hosted bot therefore cannot trade Topstep accounts at all ([TopstepX API Access](https://help.topstep.com/en/articles/11187768-topstepx-api-access)).
+> - **Tradovate API (Section 2.1):** the $1,000 live-account minimum and the $25/mo API Access add-on are confirmed by Tradovate's support article, which also states "prop firm and evaluation accounts are not eligible for API access" ([Tradovate API Access](https://support.tradovate.com/s/article/Tradovate-API-Access?language=en_US)).
+> - **ProjectX:** ProjectX wound down its third-party service for most partner firms, with support ending 2026-02-28. TopstepX is effectively the only remaining ProjectX venue ([projectx.com](https://www.projectx.com/)).
+> - **Firms that do allow bots in funded accounts** (subject to conditions): Lucid Trading, Tradeify, Bulenox and MyFundedFutures, plus FundedNext Futures with conditions. A personal IBKR account is no longer the only route for a fully autonomous bot.
+
 - **Topstep**: bots/custom automation **allowed via the TopstepX (ProjectX) API**, subject to platform rules and a ban on HFT; API is sim-only and **not available on Live Funded accounts** ([Topstep help](https://help.topstep.com/en/articles/11187768)).
 - **Apex Trader Funding**: secondary sources consistently report automation permitted in evaluations but **fully automated trading prohibited on funded (Performance/Live) accounts**, semi-automated with active oversight allowed ([TradersPost](https://blog.traderspost.io/article/automate-apex-trader-funding-with-traderspost), [PickMyTrade](https://blog.pickmytrade.io/5-prop-firm-automation-rules-before-you-run-a-bot-2026/)) — Apex's own rule page was not retrieved: **UNVERIFIED**.
 - Prop rules change frequently; re-check before connecting any bot.
