@@ -333,6 +333,56 @@ Everything runs on the user's **Mac** wherever possible. It moves to the user's 
   - Silence counts as allowed.
   - Where the rules explicitly require a step (for example, bot approval), flag it to the user, who decides.
 
+## Nightly run
+
+Decided in [Nightly run on the Mac: schedule, steps, and how the user knows it worked](https://github.com/DaltonDom/moon-ai/issues/25).
+
+**Schedule**
+
+- **A launchd agent runs the job every day at 18:30 New York time.** It is the user's own LaunchAgent, so it needs no admin password.
+- **The job catches up and is idempotent.** Each run replays every completed CME session whose data Databento will serve and that hasn't been replayed yet, oldest first, then stops. Missing a night is harmless: the next run does both sessions. The same code works whether Databento serves yesterday's session at T+1 (the research's plan) or sooner.
+
+  The embargo a usage-only account actually sees is still UNVERIFIED: on 2026-10-31, `get_dataset_range` reported data up to 8 hours old, but the market was closed. The first week's runs record it.
+- **The Mac doesn't have to stay awake.** If it is asleep at 18:30, launchd runs the job when it wakes; if it was off, the next day's run catches up. `doctor` warns when no run has finished in 36 hours.
+- **The dashboard is installed as a second agent** that keeps `http://localhost:8000` up, so it is always one bookmark away.
+- **After 2027-04-30, nightly pulls are pay-as-you-go,** about $0.45/month. That is when the Databento credit expires, and Databento needs a card on file then. The dashboard warns 30 days before.
+
+**Steps** (each writes a pass/fail `events` row with a plain-language message)
+
+1. **Preflight:** disk space, keys, network, and a lock so only one run happens at a time.
+2. **Pull bars** for the sessions to replay, with a $1-per-night cost cap. Also pull 1-second bars for any minute where a stop and target could both have been hit.
+3. **Check the data:**
+   - bar counts against the CME calendar
+   - gaps
+   - Databento's `get_dataset_condition` (degraded days are flagged, and their replay is held)
+   - contract rolls
+4. **Refresh the news calendar.**
+5. **Replay each session** through the `Trader` with the champion model, and the challenger in shadow if one is in tryout. Everything is journaled.
+6. **Render charts, then reviews:** submit Claude reviews as a Batch, and collect the previous night's batch.
+7. **Model checks:**
+   - the rolling 60-session comparison with rules-only
+   - the drift monitors
+   - on Saturday, the weekly report and proposals
+   - at the weekend, the weekly model refresh, with guardrails
+8. **Housekeeping:** back up the journal (keep 14), rotate logs, and write a one-line summary.
+
+When a step fails, the steps that depend on it are skipped and marked "skipped". The next run retries, and nothing half-written is kept, because a session's replay is committed in one transaction.
+
+**How the user knows it worked**
+
+- **Dashboard:** the Today page's "Last night" card shows the run and each step, from the `events` table. A failed step turns the card red and explains what happened and whether anything is needed.
+- **Notifications:** a macOS notification on failure, and when something lands in "Needs you". The last line of the summary always says which model is in charge and how it compares with rules-only over the last 60 sessions. Optional phone push via a free ntfy.sh topic (`NTFY_TOPIC` in `~/.config/moon-ai/.env`).
+- **`uv run moon-ai nightly status`:** the last 7 runs in plain language, from the terminal.
+
+**Commands**
+
+| Command | Does |
+|---|---|
+| `nightly install` | writes and loads both launch agents, runs `doctor`, and does a dry run on the last available session |
+| `nightly status` | the last 7 runs and their steps |
+| `nightly run [--session YYYY-MM-DD]` | runs now, or re-runs one session into a new run |
+| `nightly uninstall` | removes both agents; data stays |
+
 ## Code layout and commands
 
 Decided in [Repo layout, engine interfaces and the Mac dev setup](https://github.com/DaltonDom/moon-ai/issues/23).
