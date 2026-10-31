@@ -2,8 +2,9 @@
 
 Every request is priced first with the free `metadata.get_cost` call, using
 exactly the parameters of the data request. Anything above `max_cost_usd` is
-refused unless the caller explicitly confirms. Each paid download is appended
-to `<store_root>/ledger.jsonl`.
+refused unless the caller explicitly confirms. Each symbol is appended to
+`<store_root>/ledger.jsonl` as soon as it is bought and written, so a request
+that fails partway still records what was already paid for.
 
 Bars land as raw Parquet, one file per symbol:
 `<store_root>/<dataset>/<schema>/<symbol>/<start>_<end>.parquet`. `ts_event`
@@ -102,22 +103,24 @@ class Downloader:
 
         files = []
         for symbol in request.symbols:
-            store = self._client.timeseries.get_range(**request.params((symbol,)))
+            params = request.params((symbol,))
+            symbol_cost = float(self._client.metadata.get_cost(**params))
+            store = self._client.timeseries.get_range(**params)
             path = self._path_for(request, symbol)
             path.parent.mkdir(parents=True, exist_ok=True)
             store.to_parquet(path, price_type="float", map_symbols=True)
             files.append(path)
+            self._record_spend(params, symbol_cost)
 
-        self._record_spend(request, cost)
         return DownloadResult(cost_usd=cost, files=tuple(files))
 
     def _path_for(self, request: DownloadRequest, symbol: str) -> Path:
         name = f"{request.start.isoformat()}_{request.end.isoformat()}.parquet"
         return self._root / request.dataset / request.schema / symbol / name
 
-    def _record_spend(self, request: DownloadRequest, cost: float) -> None:
+    def _record_spend(self, params: dict[str, Any], cost: float) -> None:
         self._root.mkdir(parents=True, exist_ok=True)
-        entry = {"at": datetime.now(UTC).isoformat(), "cost_usd": cost, **request.params()}
+        entry = {"at": datetime.now(UTC).isoformat(), "cost_usd": cost, **params}
         with (self._root / "ledger.jsonl").open("a") as fh:
             fh.write(json.dumps(entry) + "\n")
 

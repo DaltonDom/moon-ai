@@ -111,7 +111,7 @@ def test_download_writes_one_parquet_file_per_symbol_under_the_cap(tmp_path: Pat
     assert all(r["stype_in"] == "continuous" for r in client.timeseries.requests)
 
 
-def test_every_paid_download_is_appended_to_the_spend_ledger(tmp_path: Path):
+def test_every_paid_symbol_is_appended_to_the_spend_ledger(tmp_path: Path):
     client = FakeClient(cost=1.25)
     dl = Downloader(client, store_root=tmp_path, max_cost_usd=15.0)
 
@@ -119,10 +119,28 @@ def test_every_paid_download_is_appended_to_the_spend_ledger(tmp_path: Path):
     dl.download(REQUEST)
 
     lines = (tmp_path / "ledger.jsonl").read_text().splitlines()
-    assert len(lines) == 1
-    entry = json.loads(lines[0])
-    assert entry["cost_usd"] == 1.25
-    assert entry["symbols"] == ["MNQ.v.0", "NQ.v.0"]
+    entries = [json.loads(line) for line in lines]
+    assert [e["symbols"] for e in entries] == [["MNQ.v.0"], ["NQ.v.0"]]
+    assert all(e["cost_usd"] == 1.25 for e in entries)
+    assert all(e["start"] == "2024-01-01" and e["end"] == "2024-02-01" for e in entries)
+
+
+def test_symbols_bought_before_a_failure_stay_in_the_ledger(tmp_path: Path):
+    class FailsOnSecondSymbol(FakeTimeseries):
+        def get_range(self, **kwargs):
+            if kwargs["symbols"] == ["NQ.v.0"]:
+                raise RuntimeError("402 account_insufficient_funds")
+            return super().get_range(**kwargs)
+
+    client = FakeClient(cost=1.25)
+    client.timeseries = FailsOnSecondSymbol()
+    dl = Downloader(client, store_root=tmp_path, max_cost_usd=15.0)
+
+    with pytest.raises(RuntimeError, match="insufficient_funds"):
+        dl.download(REQUEST)
+
+    lines = (tmp_path / "ledger.jsonl").read_text().splitlines()
+    assert [json.loads(line)["symbols"] for line in lines] == [["MNQ.v.0"]]
 
 
 def test_api_key_comes_from_the_environment_first(tmp_path: Path):

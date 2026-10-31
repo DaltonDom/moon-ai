@@ -48,7 +48,7 @@ The command prints the estimated cost and the cap. Without `--dry-run`, it price
 - **refuses** if the estimate is above the cap (`--max-cost`, default $15 from config);
 - downloads above the cap only with an explicit `--confirm`;
 - writes raw Parquet to `data/bars/GLBX.MDP3/ohlcv-1m/<symbol>/<start>_<end>.parquet` (git-ignored);
-- appends each paid request to `data/bars/ledger.jsonl`.
+- appends each paid symbol to `data/bars/ledger.jsonl` as soon as it is written, so a request that fails partway still records what was bought.
 
 `--end` is exclusive. Without a CME subscription, keep it at least 24 hours in the past.
 
