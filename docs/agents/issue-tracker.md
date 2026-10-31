@@ -45,6 +45,12 @@ Used by `/wayfinder`. The **map** is a single issue with **child** issues as tic
 - **Claim**: `gh issue edit <n> --add-assignee @me`, the session's first write.
 - **Resolve**: `gh issue comment <n> --body "<answer>"`, then `gh issue close <n>`, then append a context pointer (gist + link) to the map's Decisions-so-far.
 
-## Cloud sessions without `gh`
+## Cloud sessions (no `gh` login)
 
-Some Claude Code cloud sessions have no `gh` CLI and use the GitHub MCP tools (`mcp__github__*`) instead: `issue_write` (create/update, `parent_issue_number` for sub-issues, `assignees` to claim), `add_issue_comment`, `issue_read`, `list_issues`. The MCP tools can't create native issue dependencies. In those sessions, record blocking with a `Blocked by: #<n>, #<n>` line at the top of the child body, and add native dependencies from the GitHub UI or `gh` when you can.
+In Claude Code cloud sessions, `gh` isn't logged in and GraphQL is blocked, so `gh issue ...` commands fail. Two things still work:
+
+- **REST through `gh api`** for labels and native dependencies:
+  - `gh api -X POST repos/DaltonDom/moon-ai/labels -f name=... -f color=...`
+  - `gh api -X POST repos/DaltonDom/moon-ai/issues/<n>/dependencies/blocked_by -F issue_id=<db-id>`
+  - `gh api -X PATCH repos/DaltonDom/moon-ai/issues/<n> -F body=@file`
+- **The GitHub MCP tools** (`mcp__github__issue_write` with `parent_issue_number` for sub-issues and `assignees` to claim, `add_issue_comment`, `issue_read`, `list_issues`).
