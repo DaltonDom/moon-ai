@@ -104,6 +104,9 @@ class IctConfig:
     sb_min_objective_points: float = 10.0
     ote_entry: float = 0.62
     ote_stop: float = 1.0
+    # Ticket #8: a London trade whose stop is closer than this is skipped (and
+    # logged as skipped), because costs would eat too much of R.
+    london_min_stop_ticks: int = 40
     po3_ref_open: time = time(0)
     bias_proxy: Literal[
         "prev_day_range",
@@ -118,13 +121,30 @@ class IctConfig:
 
 @dataclass(frozen=True)
 class BrokerConfig:
-    """Simulated broker costs and fill policy.
+    """Simulated broker costs and fill policy (ticket #8, design.md "Backtest realism").
 
-    Commission and slippage values are placeholders until ticket #8 settles them.
+    Slippage is in ticks against us. "Entry" slippage applies to market and
+    stop-entry orders (and market exits); "stop" slippage applies to bracket
+    stop exits. Limit orders and targets never slip. Values come from the
+    London liquidity research (docs/research/london-liquidity.md on the
+    `research/london-liquidity` branch): NY AM was measured, and every window
+    other than London uses it.
     """
 
-    commission_per_contract: float = 0.62  # per side, USD (placeholder, #8)
-    slippage_ticks: int = 1  # applied to market and stop fills (placeholder, #8)
+    # Generic default until a prop firm is chosen; then use that firm's rate.
+    commission_per_contract: float = 1.00  # per side, USD
+    entry_slippage_ticks: int = 1
+    stop_slippage_ticks: int = 3
+    # London override, by the time the fill's bar opens (New York time).
+    london_slippage_start: time = time(2)
+    london_slippage_end: time = time(5)
+    london_entry_slippage_ticks: int = 2
+    london_stop_slippage_ticks: int = 2
+    # Above this many contracts, London fills walk the book: both become this.
+    london_large_qty: int = 10
+    london_large_slippage_ticks: int = 3
+    # 2.0 for the double-slippage stress test every passing setup must survive.
+    slippage_multiplier: float = 1.0
     limit_fill: Literal["trade_through", "touch"] = "trade_through"
 
 

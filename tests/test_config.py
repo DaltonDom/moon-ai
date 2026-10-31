@@ -40,7 +40,8 @@ swing_n = 2
 mss_break = "wick"
 
 [broker]
-slippage_ticks = 2
+stop_slippage_ticks = 2
+london_slippage_start = "02:30"
 
 [data]
 max_cost_usd = 5.0
@@ -54,7 +55,9 @@ max_cost_usd = 5.0
     assert cfg.ict.swing_n == 2
     assert cfg.ict.mss_break == "wick"
     assert cfg.ict.displacement_k == 1.5
-    assert cfg.broker.slippage_ticks == 2
+    assert cfg.broker.stop_slippage_ticks == 2
+    assert cfg.broker.london_slippage_start == time(2, 30)
+    assert cfg.broker.entry_slippage_ticks == 1
     assert cfg.data.max_cost_usd == 5.0
 
 

@@ -1,15 +1,23 @@
 """Simulated broker behaviour, observed through the Broker interface.
 
-Instrument: MNQ, tick 0.25, $2/point. Config: 1 tick slippage, $0.50/side.
+Instrument: MNQ, tick 0.25, $2/point. Config: 1 tick slippage, $0.50/side,
+except the ticket #8 default-cost tests at the end.
 """
+
+from datetime import UTC, datetime
 
 import pytest
 
 from moon_ai.broker import Bracket, Order, OrderType, Side, SimBroker
 from moon_ai.config import BrokerConfig, load_config
-from tests.helpers import bar, second_bars
+from tests.helpers import T0, bar, second_bars
 
-CFG = BrokerConfig(commission_per_contract=0.5, slippage_ticks=1, limit_fill="trade_through")
+CFG = BrokerConfig(
+    commission_per_contract=0.5,
+    entry_slippage_ticks=1,
+    stop_slippage_ticks=1,
+    limit_fill="trade_through",
+)
 
 
 def broker(cfg: BrokerConfig = CFG, second_bar_source=None) -> SimBroker:
@@ -81,7 +89,14 @@ def test_buy_limit_needs_a_trade_through_by_default():
 
 
 def test_buy_limit_fills_on_touch_when_configured():
-    b = broker(BrokerConfig(commission_per_contract=0.5, slippage_ticks=1, limit_fill="touch"))
+    b = broker(
+        BrokerConfig(
+            commission_per_contract=0.5,
+            entry_slippage_ticks=1,
+            stop_slippage_ticks=1,
+            limit_fill="touch",
+        )
+    )
     b.on_bar(bar(0, 101, 102, 100.5, 101))
     b.submit(buy(OrderType.LIMIT, price=100.0))
 
@@ -281,3 +296,40 @@ def test_limit_entry_bar_touching_stop_and_target_is_flagged_ambiguous():
         ("entry", False, None),
         ("stop", True, "pessimistic"),
     ]
+
+
+# --- ticket #8 cost defaults ---------------------------------------------------
+
+LONDON = datetime(2026, 7, 15, 7, 0, tzinfo=UTC)  # 03:00 New York (EDT)
+
+
+def stopped_out(cfg: BrokerConfig, start=T0, qty=1) -> tuple[float, float]:
+    """(entry slippage, stop slippage) in ticks for a long market entry stopped at 98."""
+    b = broker(cfg)
+    b.on_bar(bar(0, 100, 101, 99, 100.5, start=start))
+    b.submit(buy(bracket=Bracket(stop=98.0, target=110.0), qty=qty))
+    entry = b.on_bar(bar(1, 100, 100.5, 99.5, 100, start=start))
+    stop = b.on_bar(bar(2, 99.5, 99.75, 97.5, 97.75, start=start))
+    return entry[0].slippage / 0.25, stop[0].slippage / 0.25
+
+
+def test_default_commission_is_one_dollar_per_side():
+    assert BrokerConfig().commission_per_contract == 1.00
+
+
+def test_default_slippage_outside_london_is_1_tick_entry_3_ticks_stop():
+    assert stopped_out(BrokerConfig()) == (1, 3)
+
+
+def test_default_london_slippage_is_2_ticks_entry_and_stop():
+    assert stopped_out(BrokerConfig(), start=LONDON) == (2, 2)
+
+
+def test_london_fills_above_10_contracts_slip_3_ticks():
+    assert stopped_out(BrokerConfig(), start=LONDON, qty=11) == (3, 3)
+    assert stopped_out(BrokerConfig(), start=LONDON, qty=10) == (2, 2)
+
+
+def test_slippage_multiplier_doubles_every_slippage_for_the_stress_test():
+    assert stopped_out(BrokerConfig(slippage_multiplier=2.0)) == (2, 6)
+    assert stopped_out(BrokerConfig(slippage_multiplier=2.0), start=LONDON) == (4, 4)
