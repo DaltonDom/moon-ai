@@ -55,13 +55,26 @@ An autonomous, self-improving ICT trading bot for CME micro futures. Prove it on
 - **Dashboard:** win rate, profit factor, expectancy, average R, drawdown, Sharpe/Sortino, per setup and per model version.
 - **Claude never places trades or changes rules.**
 
+## News blackout
+
+Agreed in the grilling session for [#15](https://github.com/DaltonDom/moon-ai/issues/15), 2026-10-31. Events come from our own versioned `news_events.csv`, built from BLS, BEA and Federal Reserve records ([news-calendar research](https://github.com/DaltonDom/moon-ai/blob/research/news-calendar/docs/research/news-calendar.md)). Backtests, paper replay and live trading read the same file. Defaults live in `IctConfig` (`news_handling`, `news_blackout_minutes`, `fomc_blackout_end`).
+
+- **Blocking events (±15 minutes):** CPI, Employment Situation (NFP), PPI, GDP and PCE (08:30 ET); FOMC statement and minutes (14:00 ET); FOMC press conferences, the Chair's congressional testimony (Humphrey-Hawkins) and the Jackson Hole speech.
+- **FOMC statement days:** blocked from 13:45 to **15:30 ET**, through the end of the press conference. The NY PM Silver Bullet does not trade on those days.
+- **Recorded, not blocking:** other Chair speeches, ISM manufacturing and services (10:00), retail sales, jobless claims, JOLTS and consumer sentiment. They are ML features and the "news inside the killzone" trigger the 2022 model needs.
+- **Unscheduled events** (e.g. the Mar 2020 emergency cuts): not blocked in backtests, because live trading could not have known 15 minutes ahead. They carry `scheduled=false`, so results can be reported with and without those days. The daily stop is the protection.
+- **History records actual releases:** rows hold the time a release actually came out; cancelled releases (e.g. the Oct 2025 jobs report) have no row. Live and paper use the daily-refreshed official schedule; a release cancelled at short notice still blocks its planned time.
+- **Entries only:** the blackout blocks entries, not setups ([setup testing protocol](https://github.com/DaltonDom/moon-ai/blob/claude/zealous-heisenberg-s13jgm/docs/design.md#setup-testing-protocol), #16). A setup may form during it and enter from the end of the blackout.
+- **Open trades** are held through the news with their broker-side stop and target. A gap through the stop fills at the worse price in the simulator.
+- **Unfilled entry orders** are cancelled when a blackout starts. After it ends, the setup may place the order again if it is still valid (stop not hit, window still open).
+
 ## Hard risk rules (ML cannot override)
 
 - 1% risk per trade.
 - At most 2 trades per session.
 - Daily stop at −2%.
 - Flat by 16:00 ET.
-- No trading from 15 minutes before to 15 minutes after high-impact news.
+- No trading from 15 minutes before to 15 minutes after high-impact news (see [News blackout](#news-blackout)).
 - Kill switch at 10% drawdown.
 - Always stricter than the prop firm's limits, with a buffer: daily stop at no more than 50% of the firm's daily limit, and never within 25% of the firm's failure line.
 - **Every entry is sent with a broker-side stop and target attached,** so the trade stays protected if the PC or internet drops.
