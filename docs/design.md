@@ -15,7 +15,55 @@ An autonomous, self-improving ICT trading bot for CME micro futures. Prove it on
 - **Setup library:**
   - One self-contained file per setup.
   - A new setup goes from a plain-English description, to code, to one command or button that runs the backtest, the baseline comparison and the overfitting checks, and produces a report card.
+- **Pre-registered setup rules** (decided in [#16](https://github.com/DaltonDom/moon-ai/issues/16); parameter names follow [ict-setup-definitions.md](https://github.com/DaltonDom/moon-ai/blob/research/ict-setup-definitions/docs/research/ict-setup-definitions.md) §4). See [Setup testing protocol](#setup-testing-protocol).
 - **Monthly ICT watcher:** new uploads on the InnerCircleTrader YouTube channel are summarised into candidate setups. The user approves them before they are coded and tested.
+
+## Setup testing protocol
+
+Decided in [#16](https://github.com/DaltonDom/moon-ai/issues/16).
+
+**Pre-registration**
+
+- Each setup has one locked default config in a committed `defaults.yaml`, written before any backtest runs. The commit is the pre-registration record.
+- Only the defaults are tested first. Every run, defaults included, is logged as a trial for the Deflated Sharpe Ratio (DSR) and the Probability of Backtest Overfitting.
+- **Go-forward bar.** A setup goes forward only if all three hold on the in-sample period (the 6-month holdout stays untouched):
+  1. Its mean R per trade beats the random-entry baseline (≈1,000 runs with the same windows, stops, targets and direction mix), and the bootstrap 95% CI of the difference excludes zero.
+  2. DSR > 0.95, counting every trial logged for that setup.
+  3. At least 100 trades. Fewer is reported as "insufficient", not "fail".
+- **Rescue pass.** A setup whose default fails gets one pass of at most 12 trials. The trials are chosen in advance from that setup's UNVERIFIED parameters and change one parameter at a time, with no combinations. If none clears the bar, the setup is retired with the reason on its report card. It comes back only with new primary ICT evidence.
+
+**Defaults**
+
+| Parameter | Default | First variant(s) |
+|---|---|---|
+| NY AM killzone (OTE pullback, 2022 model) | 08:30–11:00 | 07:00–10:00 |
+| London killzone / London SB | 02:00–05:00 / 03:00–04:00 | — |
+| Extra SB windows | off | 07:00–08:30 |
+| Swing N / sweep close-back *m* / MSS | 1 / 1 bar / on close | — |
+| Displacement | body ≥ 1.5 × ATR(14) | 1.0, 2.0 |
+| FVG selection / entry | first FVG after the MSS / near edge | first-tethered / CE |
+| Stop | sweep extreme + 1 tick | — |
+| OTE entry | 62% | 70.5%, 79% |
+| SB minimum objective (AM and PM) | 10 NQ points | AM: 15, 20 (with first-tethered); PM: 5 |
+| Power of 3 reference open | 00:00 ET | — |
+| Limit-fill rule | set by [#8](https://github.com/DaltonDom/moon-ai/issues/8) | — |
+
+**Daily bias**
+
+- Bias is not a gate in the default rules. All five bias proxies are logged as ML features. "Trade only with the bias" is one rescue-pass variant per setup.
+- London sweep-and-reverse uses bias to detect the Judas swing, via the previous-day range rule. On an inside day there is no bias, and either side of the Asian range qualifies.
+- The 2022 model uses weekly expansion, its own checklist step.
+- The ground-truth days need no bias call.
+
+**Overlapping setups**
+
+- Each setup is backtested in isolation, with its own report card and baseline. Within one setup, signals on the same bars are one trade.
+- In portfolio runs, each trade has one owner. Priority goes NY AM SB > NY PM SB > London sweep-and-reverse > OTE pullback > 2022 model. Other matching setups are logged as tags.
+- The 2-trades-per-session cap counts deduped trades. Signals blocked by the cap are logged as `skipped:cap` candidates with full features and are not traded.
+
+**News**
+
+- The ±15-minute blackout blocks the entry only. A setup may form during it, and entry is allowed from +15 minutes. "Blackout blocks the whole setup" is a rescue-pass variant. The blackout rules themselves are set in [#15](https://github.com/DaltonDom/moon-ai/issues/15).
 
 ## How it learns
 
