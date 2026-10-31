@@ -157,6 +157,25 @@ Decided in [#9](https://github.com/DaltonDom/moon-ai/issues/9). Terms are define
 - **Dashboard:** win rate, profit factor, expectancy, average R, drawdown, Sharpe/Sortino, per setup and per model version.
 - **Claude never places trades or changes rules.**
 
+## Backtest realism
+
+Agreed in the grilling session for [#8](https://github.com/DaltonDom/moon-ai/issues/8), 2026-10-31. Backtests and the nightly paper replay use exactly the same rules, so their results stay comparable. Defaults live in `BrokerConfig` in `src/moon_ai/config.py`.
+
+- **Commission:** $1.00 per contract per side ($2.00 round trip), a deliberately pessimistic generic rate. Swap in the chosen prop firm's real rate once a firm is picked.
+- **Slippage:** applied to market orders, stop entries and bracket stop exits. Limit entries and targets never slip. Numbers come from the [London liquidity research](https://github.com/DaltonDom/moon-ai/blob/research/london-liquidity/docs/research/london-liquidity.md) (Databento tick data, Oct 2026):
+
+  | Window (time the fill's bar opens, New York) | Entry | Stop exit |
+  |---|---:|---:|
+  | London 02:00–05:00 | 2 ticks | 2 ticks |
+  | London, more than 10 contracts | 3 ticks | 3 ticks |
+  | Everything else (NY AM measured; NY PM and other windows reuse it) | 1 tick | 3 ticks |
+
+- **No volatility model.** Instead, every setup that passes the [setup testing protocol](https://github.com/DaltonDom/moon-ai/blob/claude/zealous-heisenberg-s13jgm/docs/design.md#setup-testing-protocol) (#16) is re-run once with **double slippage** (`slippage_multiplier = 2.0`) and goes forward only if it is still profitable.
+- **Limit fills:** a limit (e.g. an FVG-edge entry or a target) fills only when price trades **1 tick through** it; a touch is not a fill.
+- **Same-bar stop and target:** the stop is assumed to fill first, unless 1-second bars for that minute (bought on demand, pennies) show the order. On the bar an entry fills, a touched stop counts and a touched target does not.
+- **Skipped sessions:** no new trades on CME holiday sessions, early-close sessions, or the session in which the continuous `.v.0` contract rolls (the previous session's levels belong to the old contract). No price adjustment across rolls.
+- **London minimum stop:** a London trade whose stop is under **40 ticks** (10 MNQ points) is skipped, and logged as a skipped candidate so the ML and reviews still see it (`IctConfig.london_min_stop_ticks`). At the 24-tick median of a bare one-bar sweep, costs would be about 27% of R.
+
 ## Hard risk rules (ML cannot override)
 
 - 1% risk per trade.

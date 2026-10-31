@@ -12,7 +12,8 @@ from tests.helpers import bar
 
 def sim() -> SimBroker:
     return SimBroker(
-        BrokerConfig(commission_per_contract=0.5, slippage_ticks=1), load_config().instrument
+        BrokerConfig(commission_per_contract=0.5, entry_slippage_ticks=1, stop_slippage_ticks=1),
+        load_config().instrument,
     )
 
 

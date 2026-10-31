@@ -10,6 +10,8 @@ Fill rules of `SimBroker`, against 1-minute OHLC bars:
 - Limit: fills at the limit, or at the better open on a gap. By default the bar
   must trade *through* the limit by a tick; `limit_fill = "touch"` fills on a
   touch. Limit fills don't slip.
+- Slippage depends on the window the fill's bar opens in, the order size and
+  whether it is a bracket stop exit (see `BrokerConfig`).
 - Commission is charged per contract on every fill.
 
 Brackets: an order's stop and target become active the moment it fills.
@@ -36,7 +38,8 @@ from enum import Enum
 from typing import Literal, Protocol
 
 from moon_ai.bars import Bar
-from moon_ai.config import BrokerConfig, InstrumentSpec
+from moon_ai.config import BrokerConfig, InstrumentSpec, Window
+from moon_ai.sessions import in_window
 
 
 class Side(Enum):
@@ -256,7 +259,7 @@ class SimBroker:
         """Fill working order `w`: close opposite lots first, open a lot with the rest."""
         del self._s.working[w.id]
         order = w.order
-        slip = 0.0 if order.type is OrderType.LIMIT else self._slip(order.symbol)
+        slip = 0.0 if order.type is OrderType.LIMIT else self._slip(order.symbol, bar, order.qty)
         price = raw_price + order.side.value * slip
         fills: list[Fill] = []
         remaining = order.qty
@@ -299,7 +302,7 @@ class SimBroker:
         target_hit = h >= target + through
 
         def close(raw: float, reason: FillReason, **flags: object) -> Fill:
-            slip = self._slip(lot.symbol) if reason == "stop" else 0.0
+            slip = self._slip(lot.symbol, bar, lot.qty, stop=True) if reason == "stop" else 0.0
             price = m.px(raw) - lot.side.value * slip
             fill = self._close(lot, lot.qty, price, bar, reason, f"{lot.id}-{reason}", slip)
             return replace(fill, **flags)  # type: ignore[arg-type]
@@ -353,8 +356,18 @@ class SimBroker:
 
     # --- costs ------------------------------------------------------------------------
 
-    def _slip(self, symbol: str) -> float:
-        return self._cfg.slippage_ticks * self._instrument(symbol).tick_size
+    def _slip(self, symbol: str, bar: Bar, qty: int, *, stop: bool = False) -> float:
+        """Slippage in price units for a fill of `qty` in `bar`; `stop` = bracket stop exit."""
+        cfg = self._cfg
+        london = Window(cfg.london_slippage_start, cfg.london_slippage_end)
+        if in_window(bar.ts_open, london):
+            if qty > cfg.london_large_qty:
+                ticks = cfg.london_large_slippage_ticks
+            else:
+                ticks = cfg.london_stop_slippage_ticks if stop else cfg.london_entry_slippage_ticks
+        else:
+            ticks = cfg.stop_slippage_ticks if stop else cfg.entry_slippage_ticks
+        return ticks * cfg.slippage_multiplier * self._instrument(symbol).tick_size
 
     def _through(self, symbol: str) -> float:
         """How far past a limit price a bar must trade to fill it."""
