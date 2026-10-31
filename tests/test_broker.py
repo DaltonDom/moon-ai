@@ -121,3 +121,163 @@ def test_bars_for_another_symbol_do_not_fill_the_order():
 def test_orders_need_a_price_unless_they_are_market_orders():
     with pytest.raises(ValueError, match="price"):
         buy(OrderType.LIMIT)
+
+
+# --- brackets --------------------------------------------------------------
+
+LONG = Bracket(stop=98.0, target=104.0)
+SHORT = Bracket(stop=102.0, target=96.0)
+
+
+def long_open(bracket=LONG, second_bar_source=None, cfg=CFG) -> SimBroker:
+    """A broker holding 1 long MNQ, entered at 100.25 (market at 100 + 1 tick)."""
+    b = broker(cfg, second_bar_source)
+    b.on_bar(bar(0, 100, 100.5, 99.5, 100))
+    b.submit(buy(bracket=bracket))
+    b.on_bar(bar(1, 100, 100.5, 99.75, 100.25))
+    assert b.position("MNQ.v.0") == 1
+    return b
+
+
+def test_bracket_target_closes_the_position_at_the_target():
+    b = long_open()
+
+    fills = b.on_bar(bar(2, 101, 104.5, 100.75, 104.25))
+
+    assert [(f.reason, f.price, f.side) for f in fills] == [("target", 104.0, Side.SELL)]
+    assert fills[0].pnl == pytest.approx((104.0 - 100.25) * 2.0)
+    assert b.position("MNQ.v.0") == 0
+
+
+def test_bracket_target_also_needs_a_trade_through():
+    b = long_open()
+
+    assert b.on_bar(bar(2, 101, 104.0, 100.75, 103.5)) == []
+
+
+def test_bracket_stop_closes_the_position_with_slippage():
+    b = long_open()
+
+    fills = b.on_bar(bar(2, 99.5, 99.75, 97.5, 97.75))
+
+    assert [(f.reason, f.price) for f in fills] == [("stop", 97.75)]
+    assert fills[0].pnl == pytest.approx((97.75 - 100.25) * 2.0)
+
+
+def test_gap_through_the_stop_fills_at_the_open_less_slippage():
+    b = long_open()
+
+    fills = b.on_bar(bar(2, 96.0, 96.5, 95.0, 95.5))
+
+    assert [(f.reason, f.price, f.resolved_by) for f in fills] == [("stop", 95.75, "gap")]
+
+
+def test_stop_and_target_in_the_same_bar_fills_the_stop_first():
+    b = long_open()
+
+    fills = b.on_bar(bar(2, 100, 104.5, 97.5, 101))
+
+    assert [(f.reason, f.ambiguous, f.resolved_by) for f in fills] == [
+        ("stop", True, "pessimistic")
+    ]
+
+
+def test_one_second_bars_decide_a_same_bar_stop_and_target():
+    # Inside minute 2 the target trades first, then the stop.
+    seconds = second_bars(2, [(100, 101, 100, 101), (101, 104.5, 101, 104), (104, 104, 97.5, 98)])
+    b = long_open(second_bar_source=lambda symbol, ts: seconds)
+
+    fills = b.on_bar(bar(2, 100, 104.5, 97.5, 98))
+
+    assert [(f.reason, f.price, f.ambiguous, f.resolved_by) for f in fills] == [
+        ("target", 104.0, True, "1s")
+    ]
+
+
+def test_one_second_bars_can_confirm_the_stop_came_first():
+    seconds = second_bars(2, [(100, 100, 97.5, 98), (98, 104.5, 98, 104)])
+    b = long_open(second_bar_source=lambda symbol, ts: seconds)
+
+    fills = b.on_bar(bar(2, 100, 104.5, 97.5, 104))
+
+    assert [(f.reason, f.resolved_by) for f in fills] == [("stop", "1s")]
+
+
+def test_missing_one_second_bars_fall_back_to_stop_first():
+    b = long_open(second_bar_source=lambda symbol, ts: None)
+
+    fills = b.on_bar(bar(2, 100, 104.5, 97.5, 101))
+
+    assert [(f.reason, f.resolved_by) for f in fills] == [("stop", "pessimistic")]
+
+
+def test_short_bracket_mirrors_the_long():
+    b = broker()
+    b.on_bar(bar(0, 100, 100.5, 99.5, 100))
+    b.submit(sell(bracket=SHORT))
+    b.on_bar(bar(1, 100, 100.5, 99.5, 100))  # sold at 99.75
+
+    fills = b.on_bar(bar(2, 99, 99.5, 95.5, 96))
+
+    assert [(f.reason, f.price, f.side) for f in fills] == [("target", 96.0, Side.BUY)]
+    assert fills[0].pnl == pytest.approx((99.75 - 96.0) * 2.0)
+
+
+def test_market_entry_bar_can_hit_the_target_after_the_open():
+    b = broker()
+    b.on_bar(bar(0, 100, 100.5, 99.5, 100))
+    b.submit(buy(bracket=LONG))
+
+    fills = b.on_bar(bar(1, 100, 104.5, 99.75, 104))
+
+    assert [f.reason for f in fills] == ["entry", "target"]
+
+
+def test_limit_entry_bar_never_credits_the_target_without_one_second_bars():
+    b = broker()
+    b.on_bar(bar(0, 101, 101.5, 100.5, 101))
+    b.submit(buy(OrderType.LIMIT, price=100.0, bracket=LONG))
+
+    # Low trades through the limit and high trades through the target, but the
+    # order of the two inside the bar is unknown.
+    fills = b.on_bar(bar(1, 101, 104.5, 99.5, 103))
+
+    assert [f.reason for f in fills] == ["entry"]
+    assert b.position("MNQ.v.0") == 1
+
+
+def test_limit_entry_bar_that_reaches_the_stop_is_stopped_out():
+    b = broker()
+    b.on_bar(bar(0, 101, 101.5, 100.5, 101))
+    b.submit(buy(OrderType.LIMIT, price=100.0, bracket=LONG))
+
+    fills = b.on_bar(bar(1, 101, 101, 97.5, 98))
+
+    assert [(f.reason, f.price) for f in fills] == [("entry", 100.0), ("stop", 97.75)]
+    assert b.position("MNQ.v.0") == 0
+
+
+def test_opposite_market_order_flattens_and_cancels_the_bracket():
+    b = long_open()
+    b.submit(sell())
+
+    fills = b.on_bar(bar(2, 101, 101.5, 100.5, 101))
+    later = b.on_bar(bar(3, 101, 105, 97, 101))
+
+    assert [(f.reason, f.price) for f in fills] == [("exit", 100.75)]
+    assert fills[0].pnl == pytest.approx((100.75 - 100.25) * 2.0)
+    assert later == []
+    assert b.position("MNQ.v.0") == 0
+
+
+def test_limit_entry_bar_touching_stop_and_target_is_flagged_ambiguous():
+    b = broker()
+    b.on_bar(bar(0, 101, 101.5, 100.5, 101))
+    b.submit(buy(OrderType.LIMIT, price=100.0, bracket=LONG))
+
+    fills = b.on_bar(bar(1, 101, 104.5, 97.5, 101))
+
+    assert [(f.reason, f.ambiguous, f.resolved_by) for f in fills] == [
+        ("entry", False, None),
+        ("stop", True, "pessimistic"),
+    ]
