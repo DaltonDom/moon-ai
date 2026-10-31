@@ -75,6 +75,21 @@ svg text { font: 11px var(--num); fill: var(--sub); }
 .cal span { width: 16px; height: 16px; border-radius: 4px; background: var(--line); }
 .legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--sub); align-items: center; }
 .legend i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; vertical-align: -2px; margin-right: 5px; }
+.night { gap: 14px; }
+.nighthead { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.okline { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; color: var(--win); }
+.okdot { width: 8px; height: 8px; border-radius: 50%; background: var(--win); box-shadow: 0 0 0 4px var(--win-soft); }
+.nightsum { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.nightsum b { font-size: 40px; font-weight: 600; line-height: 1; }
+.nlist { display: grid; gap: 8px; }
+.ntrade { display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 12px; border-radius: 12px; background: var(--bg); color: inherit; text-decoration: none; }
+a.ntrade:hover { background: var(--accent-soft); }
+.ntrade .side { font: 700 11px var(--num); letter-spacing: .06em; text-align: center; padding: 5px 0; border-radius: 6px; background: var(--card); }
+.nmain { display: grid; gap: 2px; min-width: 0; }
+.nmain b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nmain .sub { font-size: 13px; }
+.namt { font-weight: 600; font-size: 16px; white-space: nowrap; }
+.ntrade.skip .namt { font-size: 13px; }
 /* trade rows */
 .trow { display: grid; grid-template-columns: 90px minmax(0, 1.4fr) minmax(0, 2fr) 90px; gap: 12px; align-items: center; padding: 10px 12px; border-radius: 12px; text-decoration: none; color: inherit; }
 .trow:hover { background: var(--accent-soft); }
@@ -258,13 +273,16 @@ const VIEWS = {
         <div><span class="t">${g.t}</span><b class="${g.ok ? "win" : ""}">${g.v}</b><span class="explain">${g.need} · ${g.e}</span></div></div>`).join("")}</div>
     </section>
     <div class="row">
-      <section class="card"><span class="eyebrow">Last night</span>
-        <div class="btns"><span class="pill win">● Paper run finished at 2:14 am</span><span class="pill win">Market data ✓</span><span class="pill win">News calendar ✓</span></div>
-        <div class="tiles">
-          <div class="tile"><span class="t">Result</span><b class="${lastDay.reduce((a, t) => a + t.usd, 0) >= 0 ? "win" : "loss"}">${usd(lastDay.reduce((a, t) => a + t.usd, 0))}</b><span class="explain">${lastDay.length} trade taken</span></div>
-          <div class="tile"><span class="t">Skipped</span><b>2</b><span class="explain">1 low confidence, 1 news. They'd have lost $225</span></div>
+      <section class="card night"><div class="nighthead"><span class="eyebrow">Last night · ${last.date.slice(5).replace("-", "/")}</span>
+          <span class="okline"><span class="okdot"></span>Ran at 2:14 am · data and news OK</span></div>
+        <div class="nightsum"><b class="num ${lastDay.reduce((a, t) => a + t.usd, 0) >= 0 ? "win" : "loss"}">${usd(lastDay.reduce((a, t) => a + t.usd, 0))}</b>
+          <span class="sub">from ${lastDay.length} trade${lastDay.length === 1 ? "" : "s"}</span></div>
+        <div class="nlist">
+          ${lastDay.map((t) => `<a class="ntrade" href="#trade-${t.n}"><span class="side ${t.usd >= 0 ? "win" : "loss"}">${t.usd >= 0 ? "WIN" : "LOSS"}</span>
+            <span class="nmain"><b>${t.setup.name}</b><span class="sub">${t.dir} · 10:14 am · ${t.pending ? "Claude review pending" : t.bucket}</span></span>
+            <span class="num ${t.usd >= 0 ? "win" : "loss"} namt">${usd(t.usd)}</span></a>`).join("")}
+          <div class="ntrade skip"><span class="side sub">SKIP</span><span class="nmain"><b>2 trades skipped</b><span class="sub">1 low confidence, 1 during news</span></span><span class="num namt sub">saved $225</span></div>
         </div>
-        ${lastDay.map((t) => tradeRow(t)).join("")}
       </section>
       <section class="card"><span class="eyebrow">Needs you</span><div class="todo">
         ${PROPOSALS.map((p) => `<a href="#proposals"><span class="ico" style="background:var(--accent-soft);color:var(--accent)">?</span><span><b>Approve a change?</b><br><span class="sub" style="font-size:13px">${p.title}</span></span><span class="go">Review →</span></a>`).join("")}
