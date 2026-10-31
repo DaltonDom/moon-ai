@@ -96,7 +96,7 @@ Everything runs on the user's **Mac** wherever possible. It moves to the user's 
 
 ## Stack
 
-- **Engine:** Python, NautilusTrader.
+- **Engine:** a lean custom Python event loop on Polars + `databento`, behind `BarFeed` / `Broker` / `Journal` interfaces. When a stop and a target are both hit in the same bar, the stop is assumed to fill first unless 1-second bars resolve which came first. NautilusTrader is re-evaluated at Phase 3 ([engine-choice research](https://github.com/DaltonDom/moon-ai/blob/research/engine-choice/docs/research/engine-choice.md)).
 - **ML:** LightGBM; Optuna for tuning; River for drift detection.
 - **Live connection:** our own NinjaTrader 8 add-on passes bars and orders between the Python engine and NinjaTrader on the Windows PC. NinjaTrader connects to the firm over CQG.
 - **Data:** Databento `GLBX.MDP3`.
