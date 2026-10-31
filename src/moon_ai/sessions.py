@@ -54,4 +54,3 @@ def trading_day(ts: datetime) -> date:
     if ny.time() >= TRADING_DAY_START:
         return ny.date() + timedelta(days=1)
     return ny.date()
-
