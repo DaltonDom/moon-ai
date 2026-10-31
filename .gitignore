@@ -5,5 +5,5 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 # Local market data and secrets: never commit
-data/
+/data/
 .env
