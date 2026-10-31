@@ -181,9 +181,10 @@ class SimBroker:
         return sum(lot.side.value * lot.qty for lot in self._s.lots if lot.symbol == symbol)
 
     def on_bar(self, bar: Bar) -> list[Fill]:
-        snapshot = copy.deepcopy(self._s)
+        # Snapshot only when a 1-second source could ask for a replay.
+        snapshot = copy.deepcopy(self._s) if self._second_bars is not None else None
         fills, uncertain = self._step(bar)
-        if uncertain and self._second_bars is not None:
+        if uncertain and self._second_bars is not None and snapshot is not None:
             seconds = self._second_bars(bar.symbol, bar.ts_open)
             if seconds:
                 self._s = snapshot
