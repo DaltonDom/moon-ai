@@ -230,6 +230,7 @@ class NightlyJob:
         out.append(self.reviews(db))
         if to_ny(self.now()).weekday() == 5:
             out.append(self.weekly(db))
+        out.append(self.watcher(db))
         out.append(self.models(db))
         out.append(self.housekeeping())
         out.append(self.summary(db, out))
@@ -453,6 +454,50 @@ class NightlyJob:
             return StepResult("weekly", "warn", f"The weekly report failed ({exc}).")
         extra = (" " + "; ".join(notes) + ".") if notes else ""
         return StepResult("weekly", "ok", f"Weekly report written: {path.name}.{extra}")
+
+    def watcher(self, db: SQLiteStore) -> StepResult:
+        """The ICT watcher: new uploads monthly, notes daily within Gemini's free quota."""
+        if not (os.environ.get("YOUTUBE_API_KEY") and os.environ.get("GEMINI_API_KEY")):
+            return StepResult(
+                "watcher", "skipped", "No YouTube or Gemini key, so the ICT watcher is off."
+            )
+        from moon_ai.review.claude import MONTHLY_CAP_USD, month_spend
+        from moon_ai.watcher.run import Watcher, claude_summariser
+
+        spent = month_spend(decode_json(db.read("events", PAPER_RUN), "events"), self.now())
+        summarise = (
+            claude_summariser(self.claude_factory())
+            if self.claude_factory and spent + 1.0 <= MONTHLY_CAP_USD
+            else None
+        )
+
+        def spend(usd: float, what: str) -> None:
+            t = self.now()
+            db.insert(
+                "events",
+                {
+                    "event_id": f"spend:{what}:{t.isoformat()}:{uuid.uuid4().hex[:6]}",
+                    "run_id": PAPER_RUN,
+                    "ts": t,
+                    "step": "claude_spend",
+                    "status": "info",
+                    "message": f"${usd:.4f} for the {what} summary",
+                    "data": {"cost_usd": usd},
+                },
+            )
+
+        try:
+            res = Watcher(
+                self.paths.root / "watcher",
+                self.reports.parent / "watcher",
+                summarise=summarise,
+                github=self.github_factory,
+                now=self.now,
+                on_spend=spend,
+            ).run()
+        except Exception as exc:  # never blocks anything else
+            return StepResult("watcher", "warn", f"The ICT watcher didn't run ({exc}).")
+        return StepResult("watcher", "warn" if res.fallback else "ok", res.message())
 
     def _paper_pnl(self, db: SQLiteStore) -> float:
         return sum(t["net_usd"] or 0.0 for t in decode_json(db.read("trades", PAPER_RUN), "trades"))
