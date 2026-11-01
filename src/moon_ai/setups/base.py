@@ -83,6 +83,18 @@ class SetupDefaults:
     # Round 2, registered 2026-11-01 after every setup failed (docs/research/why-losing.md).
     round2: tuple[RescueTrial, ...] = ()
 
+    @property
+    def all_trials(self) -> tuple[RescueTrial, ...]:
+        """Every pre-registered trial: the rescue list, then round 2."""
+        return (*self.rescue, *self.round2)
+
+    def trial(self, name: str) -> RescueTrial:
+        """A pre-registered trial by name, from either list."""
+        for t in self.all_trials:
+            if t.name == name:
+                return t
+        raise ValueError(f"{self.name} has no pre-registered trial {name!r}")
+
     def trial_params(self, trial: RescueTrial) -> SetupParams:
         return _apply(self.params, trial.changes, f"setups.{self.name}.rescue.{trial.name}")
 

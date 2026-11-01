@@ -23,9 +23,10 @@ import html
 import json
 import time
 from collections.abc import Callable
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from datetime import date
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, Literal
 
 from moon_ai.backtest.evaluate import Evaluation, evaluate, stress_test
@@ -194,15 +195,15 @@ def judge_all(
     return verdicts
 
 
-def _already_ran(runs_root: Path, setup: str, trial: str, start: date, end: date) -> bool:
-    """A non-stress run of this exact trial and window is already logged."""
-    for f in runs_root.glob(f"{setup}.{trial}.{start}_{end}.*"):
+def _logged_run(runs_root: Path, setup: str, trial: str, start: date, end: date) -> Path | None:
+    """The folder of a non-stress run of this exact trial and window, if one is logged."""
+    for f in sorted(runs_root.glob(f"{setup}.{trial}.{start}_{end}.*")):
         if not (f / "run.json").exists():
             continue
         notes = decode_json(read_run(f, "runs"), "runs")[0]["notes"] or {}
         if not notes.get("stress"):
-            return True
-    return False
+            return f
+    return None
 
 
 def judge_round2(
@@ -217,33 +218,45 @@ def judge_round2(
 ) -> list[tuple[str, str, bool]]:
     """Run each setup's round-2 trials, plus any pre-registered retest that was
     skipped earlier because it wasn't built, never repeating a logged run.
-    A trial that passes makes its setup go forward in verdicts.json.
-    Returns (setup, trial, passed) for every trial run."""
+
+    A trial whose run is logged but was never judged (the command stopped
+    before scoring it) is scored from that run instead of running it again.
+    A trial that passes makes its setup go forward in verdicts.json, which is
+    saved after every trial. Returns (setup, trial, passed) for every trial judged."""
     hooks = hooks or Hooks()
     defaults = load_setup_defaults()
     names = setups or sorted(defaults, key=lambda n: defaults[n].params.priority)
     kw = {**kw, "runs_root": runs_root}
     verdicts_path = runs_root / "verdicts.json"
     saved = json.loads(verdicts_path.read_text()) if verdicts_path.exists() else None
+    entry = {v["setup"]: v for v in saved["setups"]} if saved else {}
     out: list[tuple[str, str, bool]] = []
     for i, n in enumerate(names, 1):
         d = defaults[n]
-        todo = [
-            t for t in (*d.rescue, *d.round2) if not _already_ran(runs_root, n, t.name, start, end)
-        ]
-        todo = [t for t in todo if not _unbuilt(n, t, kw)]
+        judged = set(entry.get(n, {}).get("trials_run", []))
+        todo: list[tuple[RescueTrial, Path | None]] = []
+        for t in d.all_trials:
+            if t.name in judged or _unbuilt(n, t, kw):
+                continue
+            logged = _logged_run(runs_root, n, t.name, start, end)
+            if logged is not None and saved is None:
+                continue  # no record of what was judged: never repeat a logged run
+            todo.append((t, logged))
         say(f"[{i}/{len(names)}] {d.title}: {len(todo)} trial(s) to run")
-        for t in todo:
-            _, page, passed, checks = _try(n, t.name, start, end, kw, hooks, say)
+        for t, logged in todo:
+            h = hooks
+            if logged is not None:
+                say(f"  {t.name}: already run, scoring that run")
+                h = replace(hooks, run=lambda *a, _f=logged, **k: SimpleNamespace(folder=_f))
+            _, page, passed, checks = _try(n, t.name, start, end, kw, h, say)
             out.append((n, t.name, passed))
-            if saved is not None:
-                for v in saved["setups"]:
-                    if v["setup"] != n:
-                        continue
-                    v.setdefault("trials_run", []).append(t.name)
-                    if passed and v["verdict"] != "go-forward":
-                        v.update(verdict="go-forward", trial=t.name, reasons=[], report=str(page))
-                        v["checks"] = checks
+            v = entry.get(n)
+            if v is not None:
+                v.setdefault("trials_run", []).append(t.name)
+                if passed and v["verdict"] != "go-forward":
+                    v.update(verdict="go-forward", trial=t.name, reasons=[], report=str(page))
+                    v["checks"] = checks
+                verdicts_path.write_text(json.dumps(saved, indent=2) + "\n")
             if passed:
                 break
     if saved is not None:

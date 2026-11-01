@@ -86,7 +86,7 @@ class JobQueue:
         defaults = load_setup_defaults()
         if setup not in defaults:
             raise ValueError(f"unknown setup {setup!r}")
-        if trial and trial not in {t.name for t in defaults[setup].rescue}:
+        if trial and trial not in {t.name for t in defaults[setup].all_trials}:
             raise ValueError(f"{setup} has no pre-registered retest {trial!r}")
         if end <= start:
             raise ValueError("the end date must be after the start date")
