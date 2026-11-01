@@ -27,6 +27,7 @@ def test_keys_from_env_or_file(tmp_path):
     got = {r.name: r.level for r in check_keys({"GEMINI_API_KEY": "g"}, env_file)}
     assert got == {
         "DATABENTO_API_KEY": "ok",
+        "GITHUB_TOKEN": "warn",
         "GEMINI_API_KEY": "ok",
         "ANTHROPIC_API_KEY": "warn",
         "YOUTUBE_API_KEY": "warn",

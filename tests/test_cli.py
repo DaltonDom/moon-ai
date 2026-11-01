@@ -55,3 +55,18 @@ def test_missing_key_exits_nonzero(monkeypatch, tmp_path: Path, capsys):
 
     assert code == 2
     assert "DATABENTO_API_KEY" in capsys.readouterr().err
+
+
+def test_the_env_file_fills_in_keys_the_shell_does_not_set(monkeypatch, tmp_path: Path):
+    from moon_ai.cli import load_env_file
+
+    env = tmp_path / ".env"
+    env.write_text('export GEMINI_API_KEY="g-file"\nYOUTUBE_API_KEY=y-file\n')
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.setenv("YOUTUBE_API_KEY", "y-shell")
+    load_env_file(env)
+    import os
+
+    assert os.environ["GEMINI_API_KEY"] == "g-file"
+    assert os.environ["YOUTUBE_API_KEY"] == "y-shell"
+    monkeypatch.delenv("GEMINI_API_KEY")

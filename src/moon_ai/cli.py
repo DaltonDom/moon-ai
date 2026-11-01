@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from collections.abc import Callable, Sequence
 from datetime import date
@@ -16,6 +17,7 @@ from moon_ai.data.download import (
     DownloadRequest,
     HistoricalClient,
     MissingApiKey,
+    _read_dotenv,
     databento_client,
     resolve_api_key,
 )
@@ -121,11 +123,23 @@ def _parser() -> argparse.ArgumentParser:
     return p
 
 
+def load_env_file(path: Path | None = None) -> None:
+    """Copy keys from ~/.config/moon-ai/.env into the environment.
+
+    The launchd jobs start with almost no environment, so this one file is
+    where every key lives. A key already set in the shell wins.
+    """
+    for key, value in _read_dotenv(path or DEFAULT_ENV_FILE).items():
+        if value and not os.environ.get(key):
+            os.environ[key] = value
+
+
 def main(
     argv: Sequence[str] | None = None,
     client_factory: Callable[[str], HistoricalClient] = databento_client,
 ) -> int:
     args = _parser().parse_args(argv)
+    load_env_file()
     if args.command == "backtest":
         return _backtest(args)
     if args.command == "nightly":

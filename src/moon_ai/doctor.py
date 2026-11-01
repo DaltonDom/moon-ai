@@ -25,9 +25,10 @@ from moon_ai.data.store import BarStore
 Level = Literal["ok", "warn", "fail"]
 KEYS = {
     "DATABENTO_API_KEY": ("fail", "needed to download prices"),
-    "ANTHROPIC_API_KEY": ("warn", "needed later for Claude's trade reviews"),
-    "GEMINI_API_KEY": ("warn", "needed later for the monthly ICT watcher"),
-    "YOUTUBE_API_KEY": ("warn", "needed later for the monthly ICT watcher"),
+    "ANTHROPIC_API_KEY": ("warn", "needed for Claude's trade reviews and weekly report"),
+    "GITHUB_TOKEN": ("warn", "needed for the dashboard's Approve/No buttons"),
+    "GEMINI_API_KEY": ("warn", "needed for the monthly ICT watcher"),
+    "YOUTUBE_API_KEY": ("warn", "needed for the monthly ICT watcher"),
 }
 LAUNCH_AGENTS = Path.home() / "Library" / "LaunchAgents"
 MIN_FREE_GB = 5.0
