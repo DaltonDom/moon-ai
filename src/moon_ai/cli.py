@@ -121,6 +121,13 @@ def _parser() -> argparse.ArgumentParser:
         help="run without the news blackout (results will be optimistic)",
     )
 
+    dg = sub.add_parser("diagnose", help="why a setup's backtest won or lost (research only)")
+    dg.add_argument("setup", help="e.g. ote_pullback")
+    dg.add_argument("--trial", default="default", help="which tested version (default: default)")
+    dg.add_argument("--runs", type=Path, default=Path("data/runs"), help="where runs are")
+    dg.add_argument("--store", type=Path, help="local bar store root")
+    dg.add_argument("--no-ml", action="store_true", help="skip the ML check (faster)")
+
     fn = sub.add_parser(
         "funnel", help="where a setup's trade ideas die, step by step (diagnostics only)"
     )
@@ -154,6 +161,14 @@ def main(
         return _backtest(args)
     if args.command == "funnel":
         return _funnel(args)
+    if args.command == "diagnose":
+        from moon_ai.backtest.diagnose import diagnose
+
+        lines = diagnose(
+            args.setup, args.runs, trial=args.trial, store_root=args.store, ml=not args.no_ml
+        )
+        print("\n".join(lines))
+        return 0
     if args.command == "nightly":
         return _nightly(args)
     if args.command == "dashboard":
