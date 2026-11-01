@@ -91,3 +91,22 @@ def test_intel_mode_python_on_an_apple_chip_fails():
     assert check_native("Darwin", "arm64", apple_chip=lambda: True).level == "ok"
     assert check_native("Darwin", "x86_64", apple_chip=lambda: False).level == "ok"  # Intel Mac
     assert check_native("Linux", "x86_64", apple_chip=lambda: True).level == "ok"
+
+
+def test_a_nightly_run_that_stopped_is_flagged(tmp_path):
+    import sqlite3
+    from datetime import UTC, datetime, timedelta
+
+    path = tmp_path / "j.sqlite"
+    SQLiteStore(path).close()
+    last = datetime(2026, 11, 1, 23, 0, tzinfo=UTC)
+
+    with sqlite3.connect(path) as conn:
+        conn.execute(
+            "INSERT INTO events (event_id, run_id, ts, step, status, message) "
+            "VALUES ('e1', 'paper', ?, 'summary', 'ok', 'done')",
+            (last.isoformat(),),
+        )
+    assert check_journal(path, now=last + timedelta(hours=30)).level == "ok"
+    stale = check_journal(path, now=last + timedelta(days=3))
+    assert stale.level == "warn" and "3 day(s) ago" in stale.message

@@ -15,7 +15,7 @@ import subprocess
 import sys
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Literal
 
@@ -133,7 +133,10 @@ def check_news(path: Path = NEWS_CSV) -> Result:
     return Result("ok", "News calendar", f"{len(events)} release times.")
 
 
-def check_journal(path: Path) -> Result:
+STALE_NIGHTLY_HOURS = 36  # the job runs once a day; this allows a late or skipped wake-up
+
+
+def check_journal(path: Path, now: datetime | None = None) -> Result:
     if not path.exists():
         return Result(
             "warn",
@@ -144,6 +147,7 @@ def check_journal(path: Path) -> Result:
     try:
         with sqlite3.connect(path) as conn:
             conn.execute("SELECT COUNT(*) FROM runs").fetchone()
+            (last,) = conn.execute("SELECT MAX(ts) FROM events WHERE run_id = 'paper'").fetchone()
     except sqlite3.Error as exc:
         return Result(
             "fail",
@@ -151,6 +155,16 @@ def check_journal(path: Path) -> Result:
             f"The journal at {path} can't be read ({exc}).",
             "Restore the latest copy from data/backups/.",
         )
+    if last is not None:
+        age = (now or datetime.now(UTC)) - datetime.fromisoformat(last)
+        if age > timedelta(hours=STALE_NIGHTLY_HOURS):
+            return Result(
+                "warn",
+                "Trade journal",
+                f"The nightly paper run last ran {age.days} day(s) ago.",
+                "Keep the Mac awake and plugged in overnight, then check "
+                "`uv run moon-ai nightly status`.",
+            )
     return Result("ok", "Trade journal", f"The journal at {path} opens fine.")
 
 
