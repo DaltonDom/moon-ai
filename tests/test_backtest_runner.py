@@ -220,3 +220,24 @@ def test_diagnose_explains_a_run(store):
     assert "exits: stop 4, target 5" in out
     assert "2. Where it wins and loses" in out and "3. Can ML pick the good ones?" in out
     assert diagnose("ote_pullback", store / "runs")[0].startswith("No ote_pullback")
+
+
+def test_diagnose_splits_survive_lumpy_features():
+    """A count feature (most rows 0) repeats its quantiles; that crashed on the Mac."""
+    import polars as pl
+
+    from moon_ai.backtest.diagnose import splits
+
+    n = 400
+    df = pl.DataFrame(
+        {
+            "decision_time": [datetime(2024, 1, 2, 15, tzinfo=UTC)] * n,
+            "side": ["long", "short"] * (n // 2),
+            "net_r": [(-1.0 if i % 3 else 2.0) for i in range(n)],
+            # 5+ distinct values, but 0 fills the lowest three fifths: repeated edges.
+            "f_bias_agree_count": [0] * 300 + [i % 6 + 1 for i in range(100)],
+            "f_stop_ticks": [float(i) for i in range(n)],
+        }
+    )
+    out = "\n".join(splits(df))
+    assert "stop_ticks (fifths)" in out and "bias_agree_count (fifths)" in out
