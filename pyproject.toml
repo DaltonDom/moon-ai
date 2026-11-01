@@ -5,6 +5,7 @@ description = "Autonomous, self-improving ICT trading bot for CME micro futures 
 requires-python = ">=3.12"
 dependencies = [
     "databento>=0.60",
+    "numpy>=2.0",
     "polars>=1.0",
 ]
 
