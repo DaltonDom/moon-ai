@@ -80,3 +80,12 @@ def test_atr_restarts_after_a_roll():
     # Bar 3 opens a new contract: no previous close and no carried ATR.
     assert values[3] is None
     assert values[4] == pytest.approx(1.0)
+
+
+def test_no_displacement_after_a_frozen_market():
+    """14 flat bars give ATR 0; the next small candle must not count (it crashed OTE)."""
+    flat = [bar(i, 100, 100, 100, 100) for i in range(14)]
+    bars = [*flat, bar(14, 100, 100.5, 100, 100.25)]
+
+    assert atr(bars, 14)[13] == 0
+    assert find_displacements(bars, tick=0.25, k=1.5, atr_period=14, require_fvg=False) == []
