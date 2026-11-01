@@ -51,6 +51,10 @@ def _parser() -> argparse.ArgumentParser:
     ng.add_argument("--scheduled", action="store_true", help=argparse.SUPPRESS)
     ng.add_argument("--data", type=Path, default=Path("data"), help="data folder")
 
+    db = sub.add_parser("dashboard", help="serve the dashboard at http://localhost:8000")
+    db.add_argument("--port", type=int, default=8000)
+    db.add_argument("--data", type=Path, default=Path("data"), help="data folder")
+
     tr = sub.add_parser("train", help="train the ML filter on the go-forward setups' backtests")
     tr.add_argument("--runs", type=Path, default=Path("data/runs"), help="where backtest runs are")
     tr.add_argument("--store", type=Path, help="local bar store root")
@@ -121,6 +125,8 @@ def main(
         return _backtest(args)
     if args.command == "nightly":
         return _nightly(args)
+    if args.command == "dashboard":
+        return _dashboard(args)
     if args.command == "train":
         return _train(args)
     if args.command == "review-days":
@@ -159,6 +165,19 @@ def main(
         print("dry run: nothing downloaded")
     for path in result.files:
         print(f"wrote {path}")
+    return 0
+
+
+def _dashboard(args: argparse.Namespace) -> int:
+    import uvicorn
+
+    from moon_ai.dashboard.api import create_app
+    from moon_ai.nightly.job import Paths
+
+    ui = Path(__file__).parent / "dashboard" / "ui"
+    app = create_app(paths=Paths(args.data), static_dir=ui, run_worker=True)
+    # 127.0.0.1 only: the dashboard is never reachable from another machine.
+    uvicorn.run(app, host="127.0.0.1", port=args.port, log_level="warning")
     return 0
 
 

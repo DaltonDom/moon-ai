@@ -5,9 +5,11 @@ description = "Autonomous, self-improving ICT trading bot for CME micro futures 
 requires-python = ">=3.12"
 dependencies = [
     "databento>=0.60",
+    "fastapi>=0.110",
     "numpy>=2.0",
     "polars>=1.0",
     "scikit-learn>=1.5",
+    "uvicorn>=0.29",
 ]
 
 [project.scripts]
@@ -15,6 +17,7 @@ moon-ai = "moon_ai.cli:main"
 
 [dependency-groups]
 dev = [
+    "httpx>=0.27",
     "pytest>=8",
     "ruff>=0.6",
 ]
