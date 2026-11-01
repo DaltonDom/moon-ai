@@ -1,8 +1,9 @@
 name: CI
 
 on:
+  # Once per PR and once on main: branch pushes would run it twice.
   push:
-    branches: [main, "claude/**", "feat/**"]
+    branches: [main]
   pull_request:
 
 permissions:
@@ -14,20 +15,17 @@ concurrency:
 
 jobs:
   test:
-    name: ${{ matrix.os }} / py${{ matrix.python }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        # macos-latest is Apple Silicon (arm64), matching the user's Mac.
-        os: [ubuntu-latest, macos-latest]
-        python: ["3.12", "3.13"]
+    # Linux only, one Python: macOS minutes cost 10x and burned the free quota.
+    # The Mac itself is checked by `moon-ai doctor` and local test runs.
+    name: ubuntu / py3.12
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
       - uses: astral-sh/setup-uv@v6
         with:
-          python-version: ${{ matrix.python }}
+          python-version: "3.12"
 
       - name: Install dependencies
         run: uv sync
