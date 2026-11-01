@@ -468,10 +468,12 @@ def _backtest_all(args: argparse.Namespace) -> int:
             store_root=args.store,
             config=load_config(args.config),
             news=not args.no_news,
+            say=lambda line: print(line, flush=True),
         )
     except NewsCalendarMissing as exc:
         print(f"refused: {exc}", file=sys.stderr)
         return 2
+    print()
     for v in verdicts:
         how = "" if v.trial == "default" else f" with retest {v.trial}"
         print(f"{v.title}: {WORDS[v.verdict][0]}{how} ({len(v.trials_run)} version(s) tested)")

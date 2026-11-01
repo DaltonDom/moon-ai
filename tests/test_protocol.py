@@ -75,3 +75,11 @@ def test_judge_all_writes_verdicts_and_a_summary(tmp_path):
     assert (tmp_path / "verdicts.json").exists()
     page = (tmp_path / "summary.html").read_text()
     assert "0 of 2 setups go forward" in page and "Not enough trades" in page
+
+
+def test_judge_all_says_what_it_is_doing(tmp_path):
+    hooks, _ = fake_hooks({"default": "insufficient"})
+    lines: list[str] = []
+    judge_all(START, END, tmp_path, hooks=hooks, setups=["ote_pullback"], say=lines.append)
+    assert lines[0].startswith("[1/1] ") and "testing default version" in lines[1]
+    assert "trades, did not pass" in lines[2]
