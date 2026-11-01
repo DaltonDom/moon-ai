@@ -45,6 +45,22 @@ def _parser() -> argparse.ArgumentParser:
         help="after an intentional change: rewrite tests/frozen/expected.json",
     )
 
+    rv = sub.add_parser("review-days", help="mark sampled days so the bot matches your ICT reading")
+    rv.add_argument("setup", nargs="?", help="e.g. ny_am_silver_bullet")
+    rv.add_argument("--days", type=int, default=50, help="how many days to sample (default 50)")
+    rv.add_argument("--from", dest="start", type=date.fromisoformat, default=date(2019, 6, 3))
+    rv.add_argument("--to", dest="end", type=date.fromisoformat, default=date(2026, 5, 1))
+    rv.add_argument("--seed", type=int, default=7, help="which random sample")
+    rv.add_argument("--store", type=Path, help="local bar store root")
+    rv.add_argument("--out", type=Path, default=Path("data/review"), help="where the page goes")
+    rv.add_argument("--no-open", action="store_true")
+    rv.add_argument(
+        "--import",
+        dest="import_file",
+        type=Path,
+        help="save an exported verdict file as the CI ground-truth fixture",
+    )
+
     doc = sub.add_parser("doctor", help="check the setup and say what to fix")
     doc.add_argument("--config", type=Path, help="TOML config overriding the defaults")
 
@@ -91,6 +107,8 @@ def main(
     args = _parser().parse_args(argv)
     if args.command == "backtest":
         return _backtest(args)
+    if args.command == "review-days":
+        return _review_days(args)
     if args.command == "verify":
         return _verify(args)
     if args.command == "doctor":
@@ -125,6 +143,34 @@ def main(
         print("dry run: nothing downloaded")
     for path in result.files:
         print(f"wrote {path}")
+    return 0
+
+
+def _review_days(args: argparse.Namespace) -> int:
+    from moon_ai.data.store import BarStore
+    from moon_ai.groundtruth import import_verdicts, sample_days
+    from moon_ai.groundtruth.page import build
+
+    store = BarStore(args.store or load_config().data.store_root)
+    if args.import_file:
+        folder = import_verdicts(args.import_file, store)
+        print(f"saved the ground truth to {folder}; commit it so CI checks it")
+        return 0
+    if not args.setup:
+        print("refused: name a setup, or use --import FILE", file=sys.stderr)
+        return 2
+    days = sample_days(store, args.start, args.end, args.days, args.seed)
+    if not days:
+        print(f"refused: no price data in {store.root} for those dates", file=sys.stderr)
+        return 2
+    args.out.mkdir(parents=True, exist_ok=True)
+    page = args.out / f"review-{args.setup}.html"
+    page.write_text(build(args.setup, days, store))
+    print(f"review page for {len(days)} days: {page}")
+    if not args.no_open:
+        import webbrowser
+
+        webbrowser.open(page.resolve().as_uri())
     return 0
 
 
