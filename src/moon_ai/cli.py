@@ -56,6 +56,10 @@ def _parser() -> argparse.ArgumentParser:
     db.add_argument("--port", type=int, default=8000)
     db.add_argument("--data", type=Path, default=Path("data"), help="data folder")
 
+    wa = sub.add_parser("watcher", help="the ICT watcher: notes on ICT's new videos")
+    wa.add_argument("--month", help="re-run a past month, YYYY-MM")
+    wa.add_argument("--data", type=Path, default=Path("data"), help="data folder")
+
     tr = sub.add_parser("train", help="train the ML filter on the go-forward setups' backtests")
     tr.add_argument("--runs", type=Path, default=Path("data/runs"), help="where backtest runs are")
     tr.add_argument("--store", type=Path, help="local bar store root")
@@ -128,6 +132,8 @@ def main(
         return _nightly(args)
     if args.command == "dashboard":
         return _dashboard(args)
+    if args.command == "watcher":
+        return _watcher(args)
     if args.command == "train":
         return _train(args)
     if args.command == "review-days":
@@ -166,6 +172,28 @@ def main(
         print("dry run: nothing downloaded")
     for path in result.files:
         print(f"wrote {path}")
+    return 0
+
+
+def _watcher(args: argparse.Namespace) -> int:
+    import os
+
+    from moon_ai.watcher.run import Watcher, claude_summariser
+
+    summarise = None
+    if os.environ.get("ANTHROPIC_API_KEY"):
+        import anthropic
+
+        summarise = claude_summariser(anthropic.Anthropic())
+    github = None
+    if os.environ.get("GITHUB_TOKEN"):
+        from moon_ai.dashboard.proposals import RestGitHub
+
+        github = RestGitHub
+    res = Watcher(
+        args.data / "watcher", Path("reports/watcher"), summarise=summarise, github=github
+    ).run(month=args.month)
+    print(res.message())
     return 0
 
 

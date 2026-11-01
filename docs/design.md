@@ -368,6 +368,7 @@ Decided in [Nightly run on the Mac: schedule, steps, and how the user knows it w
    - the drift monitors
    - on Saturday, the weekly report and proposals
    - at the weekend, the weekly model refresh, with guardrails
+   - the ICT watcher: new uploads every 28 days, and Gemini notes daily within the free quota (8 h of video, 20 requests). A finished month gets a Claude summary and one `ict-watcher` review issue.
 8. **Housekeeping:** back up the journal (keep 14), rotate logs, and write a one-line summary.
 
 When a step fails, the steps that depend on it are skipped and marked "skipped". The next run retries, and nothing half-written is kept, because a session's replay is committed in one transaction.
