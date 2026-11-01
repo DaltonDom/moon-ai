@@ -12,9 +12,10 @@ makes results look better than live trading could.
 
 from __future__ import annotations
 
+import math
 import subprocess
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, date, datetime, time, timedelta
 from pathlib import Path
 from typing import Any
@@ -100,6 +101,11 @@ def run_backtest(
     """Backtest `setup` (its default, or one pre-registered rescue `trial`) over
     the trading days [start, end)."""
     config = config or load_config()
+    # The kill switch stops new trades for good after a 10% drawdown. That is a
+    # live and paper safety stop; in a backtest it would hide every trade after
+    # the first bad patch, so the setup is judged on the whole period and its
+    # drawdown is reported instead. The per-session rules still apply.
+    config = replace(config, risk=replace(config.risk, kill_switch_drawdown_pct=math.inf))
     defaults = load_setup_defaults(defaults_path)[setup]
     params = defaults.params
     if trial is not None:
@@ -113,6 +119,7 @@ def run_backtest(
         "setup": setup,
         "trial": trial or "default",
         "symbol": symbol,
+        "kill_switch": "off (backtests judge the whole period)",
         **(extra_notes or {}),
     }
     blackout = None
