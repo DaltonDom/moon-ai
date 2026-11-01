@@ -160,7 +160,7 @@ Decided in [#10](https://github.com/DaltonDom/moon-ai/issues/10). These numbers 
 **Switching off, rollback and drift**
 
 - **Rolling check against rules-only:** the same paired bootstrap of the live model against rules-only on the last 60 paper sessions. If the model is worse at one-sided 95%, the bot falls back to rules-only automatically. If only the latest refresh is to blame (the previous version passes the same check), it rolls back to that version. The user is notified either way.
-- **Drift alarms (River ADWIN)** watch the per-candidate Brier score and the take rate. An alarm freezes refreshes and promotions, runs the rolling check immediately and notifies the user. An alarm never disables the model on its own.
+- **Drift alarms (ADWIN)** watch the per-candidate Brier score and the take rate. An alarm freezes refreshes and promotions, runs the rolling check immediately and notifies the user. An alarm never disables the model on its own.
 - **During an active evaluation:** no promotions and no refreshes. Falling back to rules-only is allowed; rolling back to an earlier model version is not.
 
 ## Verifiability
@@ -466,7 +466,7 @@ uv supplies Python 3.12. Keys live in `~/.config/moon-ai/.env`, as the Databento
 ## Stack
 
 - **Engine:** a lean custom Python event loop on Polars + `databento`, behind `BarFeed` / `Broker` / `Journal` interfaces. When a stop and a target are both hit in the same bar, the stop is assumed to fill first unless 1-second bars resolve which came first. NautilusTrader is re-evaluated at Phase 3 ([engine-choice research](https://github.com/DaltonDom/moon-ai/blob/research/engine-choice/docs/research/engine-choice.md)).
-- **ML:** gradient-boosted trees via scikit-learn's `HistGradientBoostingClassifier` (the LightGBM algorithm; chosen over the LightGBM package because its Mac wheel needs a separate libomp install), isotonic calibration; River for drift detection.
+- **ML:** gradient-boosted trees via scikit-learn's `HistGradientBoostingClassifier` (the LightGBM algorithm; chosen over the LightGBM package because its Mac wheel needs a separate libomp install), isotonic calibration; ADWIN drift detection written in `ml/promotion.py` (River has no Apple Silicon wheel for its current version).
 - **Live connection:** our own NinjaTrader 8 add-on passes bars and orders between the Python engine and NinjaTrader on the Windows PC. NinjaTrader connects to the firm over the firm's own connection: CQG/Tradovate for Lucid, Rithmic for Bulenox, Tradovate for MyFundedFutures ([NinjaTrader automation research](research/ninjatrader-automation.md)).
 - **Data:** Databento `GLBX.MDP3`.
 - **Dashboard:** FastAPI + React.
