@@ -32,7 +32,9 @@ from moon_ai.backtest.evaluate import Evaluation, evaluate, stress_test
 from moon_ai.backtest.report import CSS, render
 from moon_ai.backtest.runner import BacktestResult, run_backtest
 from moon_ai.backtest.stats import Metrics
-from moon_ai.setups import load_setup_defaults
+from moon_ai.config import load_config
+from moon_ai.setups import REGISTRY, load_setup_defaults
+from moon_ai.setups.base import RescueTrial
 
 Final = Literal["go-forward", "retired", "insufficient"]
 
@@ -103,6 +105,16 @@ def _try(
     return ev, page, passed, _checks(ev, stress)
 
 
+def _unbuilt(setup: str, trial: RescueTrial, kw: dict[str, Any]) -> str | None:
+    """Why this retest's setup can't be built yet, or None if it can."""
+    params = load_setup_defaults()[setup].trial_params(trial)
+    try:
+        REGISTRY[setup](params, kw.get("config") or load_config())
+    except NotImplementedError as exc:
+        return str(exc)
+    return None
+
+
 def judge(
     setup: str,
     start: date,
@@ -126,7 +138,14 @@ def judge(
         )
     reasons = list(ev.reasons) or ["lost money when costs were doubled"]
     last_page = page
+    unbuilt = []
     for trial in defaults.rescue:
+        why = _unbuilt(setup, trial, kw)
+        if why:
+            # A pre-registered retest whose rule isn't coded yet: say so, don't crash.
+            say(f"  {trial.name}: skipped, not built yet ({why})")
+            unbuilt.append(trial.name)
+            continue
         _, t_page, t_passed, t_checks = _try(setup, trial.name, start, end, kw, hooks, say)
         tried.append(trial.name)
         last_page = t_page
@@ -134,7 +153,10 @@ def judge(
             return SetupVerdict(
                 setup, defaults.title, "go-forward", trial.name, [], str(t_page), tried, t_checks
             )
-    reasons.append(f"none of its {len(defaults.rescue)} pre-registered retests passed either")
+    ran = len(defaults.rescue) - len(unbuilt)
+    reasons.append(f"none of its {ran} pre-registered retests passed either")
+    if unbuilt:
+        reasons.append(f"not built yet, so not tried: {', '.join(unbuilt)}")
     return SetupVerdict(
         setup, defaults.title, "retired", "default", reasons, str(last_page), tried, checks
     )
