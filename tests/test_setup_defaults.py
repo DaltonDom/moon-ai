@@ -141,3 +141,14 @@ def test_register_names_a_setup_once():
             register("demo_setup_for_test")(Demo)
     finally:
         REGISTRY.pop("demo_setup_for_test")
+
+
+def test_built_setups_register_through_the_package():
+    import subprocess
+    import sys
+
+    # A fresh interpreter, so no test module has imported a setup module first.
+    code = "from moon_ai.setups import REGISTRY; print(sorted(REGISTRY))"
+    out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=True)
+    for name in ("ny_am_silver_bullet", "ny_pm_silver_bullet", "london_sweep_and_reverse"):
+        assert name in out.stdout

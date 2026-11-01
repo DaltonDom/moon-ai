@@ -48,6 +48,7 @@ from moon_ai.setups.base import Candidate, SetupParams, register
 FEATURE_SET = "sb-v0"
 # Named pools: New York windows whose completed high and low are liquidity.
 POOL_WINDOWS: dict[str, Window] = {
+    "asia": Window(time(20), time(0)),
     "overnight": Window(time(18), time(9, 30)),
     "opening_range": Window(time(9, 30), time(10)),
     "am_session": Window(time(9, 30), time(12)),
@@ -58,13 +59,15 @@ HISTORY_BARS = 1600  # more than one CME session of 1-minute bars
 
 class SilverBullet:
     name = "silver_bullet"
+    supports_bias = False  # subclasses that implement `_accept` for the bias gate set this
+    extra_pools: frozenset[str] = frozenset()
 
     def __init__(self, params: SetupParams, config: Config, symbol: str = "MNQ.v.0"):
-        if params.bias_gate:
-            raise NotImplementedError("bias gate for Silver Bullet setups")
+        if params.bias_gate and not self.supports_bias:
+            raise NotImplementedError(f"bias gate for {type(self).__name__}")
         if params.fvg_selection != "first":
             raise NotImplementedError(f"fvg_selection={params.fvg_selection!r}")
-        unknown = set(params.pools) - set(POOL_WINDOWS) - {"session_swing"}
+        unknown = set(params.pools) - set(POOL_WINDOWS) - {"session_swing"} - self.extra_pools
         if unknown:
             raise ValueError(f"unknown pools {sorted(unknown)}")
         self.params = params
@@ -83,13 +86,29 @@ class SilverBullet:
         day = trading_day(now)
         if day in self._done_days:
             return []
-        bars = [b for b in ctx.history(self.symbol, HISTORY_BARS) if trading_day(b.ts_close) == day]
+        history = ctx.history(self.symbol, self.history_bars)
+        bars = [b for b in history if trading_day(b.ts_close) == day]
         if not bars or bars[-1].ts_close != now:
             return []
+        self._prepare(history, bars, day)
         cand = self._find(bars, now, day)
         if cand is not None:
             self._done_days.add(day)
             return [cand]
+        return []
+
+    # --- hooks for variants (London) ------------------------------------------------
+
+    history_bars = HISTORY_BARS
+
+    def _prepare(self, history: Sequence[Bar], bars: Sequence[Bar], day: date) -> None:
+        """Per-bar context from longer history (bias, reference opens); none by default."""
+
+    def _accept(self, mss: MarketStructureShift, bars: Sequence[Bar]) -> bool:
+        """Extra rules a structure shift must pass (bias gate, PO3); all pass by default."""
+        return True
+
+    def _extra_levels(self) -> list[Level]:
         return []
 
     # --- the model -----------------------------------------------------------------
@@ -112,7 +131,13 @@ class SilverBullet:
             )
             if bars[s.index].ts_open >= sweep_from
         ]
-        shifts = find_market_structure_shifts(bars, swings, sweeps, p.mss_break, ict.mss_max_bars)
+        shifts = [
+            m
+            for m in find_market_structure_shifts(
+                bars, swings, sweeps, p.mss_break, ict.mss_max_bars
+            )
+            if self._accept(m, bars)
+        ]
         if not shifts:
             return None
         fvgs = find_fvgs(bars, self.tick, ict.fvg_min_size_ticks)
@@ -134,9 +159,9 @@ class SilverBullet:
         for name in self.params.pools:
             if name == "session_swing":
                 levels += [lv for lv in swing_levels(swings) if lv.known_at >= sweep_from]
-            else:
+            elif name in POOL_WINDOWS:
                 levels += window_levels(bars, POOL_WINDOWS[name], name)
-        return levels
+        return levels + self._extra_levels()
 
     def _plan(
         self,
