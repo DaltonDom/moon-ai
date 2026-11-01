@@ -45,6 +45,9 @@ class SetupVerdict:
     reasons: list[str]
     report: str  # path of the deciding run's report card
     trials_run: list[str] = field(default_factory=list)
+    # The deciding run's four checks, for the dashboard: trades, edge over random
+    # entries (R per trade), DSR, and net R with double costs (None if not run).
+    checks: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -57,18 +60,29 @@ class Hooks:
     render: Callable[..., Path] = render
 
 
+def _checks(ev: Evaluation, stress: Metrics | None) -> dict[str, Any]:
+    return {
+        "trades": ev.metrics.trades,
+        "edge_r": ev.metrics.expectancy_r - ev.random_mean_r,
+        "edge_ci": list(ev.edge_ci),
+        "dsr": ev.dsr,
+        "stress_net_r": None if stress is None else stress.net_r,
+    }
+
+
 def _try(
     setup: str, trial: str | None, start: date, end: date, kw: dict[str, Any], hooks: Hooks
-) -> tuple[Evaluation, Path, bool]:
+) -> tuple[Evaluation, Path, bool, dict[str, Any]]:
     """Run, evaluate, stress if it passes, write the report card. Returns
-    (evaluation, report path, passed everything)."""
+    (evaluation, report path, passed everything, the four checks)."""
     result = hooks.run(setup, start, end, trial=trial, **kw)
     ev = hooks.evaluate(result.folder, store_root=kw.get("store_root"), config=kw.get("config"))
     stress = None
     if ev.verdict == "go-forward":
         stress = hooks.stress(setup, trial, start, end, **kw)
     page = hooks.render(ev, result.folder, stress)
-    return ev, page, ev.verdict == "go-forward" and stress is not None and stress.net_r > 0
+    passed = ev.verdict == "go-forward" and stress is not None and stress.net_r > 0
+    return ev, page, passed, _checks(ev, stress)
 
 
 def judge(
@@ -76,26 +90,30 @@ def judge(
 ) -> SetupVerdict:
     hooks = hooks or Hooks()
     defaults = load_setup_defaults()[setup]
-    ev, page, passed = _try(setup, None, start, end, kw, hooks)
+    ev, page, passed, checks = _try(setup, None, start, end, kw, hooks)
     tried = ["default"]
     if passed:
-        return SetupVerdict(setup, defaults.title, "go-forward", "default", [], str(page), tried)
+        return SetupVerdict(
+            setup, defaults.title, "go-forward", "default", [], str(page), tried, checks
+        )
     if ev.verdict == "insufficient":
         return SetupVerdict(
-            setup, defaults.title, "insufficient", "default", ev.reasons, str(page), tried
+            setup, defaults.title, "insufficient", "default", ev.reasons, str(page), tried, checks
         )
     reasons = list(ev.reasons) or ["lost money when costs were doubled"]
     last_page = page
     for trial in defaults.rescue:
-        _, t_page, t_passed = _try(setup, trial.name, start, end, kw, hooks)
+        _, t_page, t_passed, t_checks = _try(setup, trial.name, start, end, kw, hooks)
         tried.append(trial.name)
         last_page = t_page
         if t_passed:
             return SetupVerdict(
-                setup, defaults.title, "go-forward", trial.name, [], str(t_page), tried
+                setup, defaults.title, "go-forward", trial.name, [], str(t_page), tried, t_checks
             )
     reasons.append(f"none of its {len(defaults.rescue)} pre-registered retests passed either")
-    return SetupVerdict(setup, defaults.title, "retired", "default", reasons, str(last_page), tried)
+    return SetupVerdict(
+        setup, defaults.title, "retired", "default", reasons, str(last_page), tried, checks
+    )
 
 
 def judge_all(

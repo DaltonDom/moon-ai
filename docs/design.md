@@ -293,6 +293,7 @@ Agreed in the grilling session for [#13](https://github.com/DaltonDom/moon-ai/is
 - A Markdown file in the repo (`reports/weekly/<ISO year>-W<week>.md`), also shown on the dashboard: metrics per setup and model version, bucket counts, skipped-candidate totals, the 3–5 most instructive trades, failed reviews, and proposals.
 - **At most 3 proposals a week,** each opened as a GitHub issue labelled `proposal`: the exact parameter or rule change, the evidence, and the test that would decide it.
 - **Two approvals.** The user adds `approved` to run the test, which is logged as a trial under the setup testing protocol (#16). The rule changes only if the test passes **and** the user approves the result.
+- **Stages are labels** on the issue, set by the dashboard's buttons (or by hand on GitHub): `proposal` (approve test) → `approved` (testing) → `test-passed` (approve change) → `adopted` (live). A failed test gets `test-failed` and is closed; "No" adds `rejected` and closes the issue as not planned. The dashboard needs a fine-grained `GITHUB_TOKEN` with issue access to this repository only.
 
 ## Hard risk rules (ML cannot override)
 
@@ -345,6 +346,7 @@ Decided in [Nightly run on the Mac: schedule, steps, and how the user knows it w
   The embargo a usage-only account actually sees is still UNVERIFIED: on 2026-10-31, `get_dataset_range` reported data up to 8 hours old, but the market was closed. The first week's runs record it.
 - **The Mac doesn't have to stay awake.** If it is asleep at 18:30, launchd runs the job when it wakes; if it was off, the next day's run catches up. `doctor` warns when no run has finished in 36 hours.
 - **The dashboard is installed as a second agent** that keeps `http://localhost:8000` up, so it is always one bookmark away.
+- **Dashboard API** (`moon-ai dashboard`, `src/moon_ai/dashboard/`): read-only JSON for the six pages under `/api/`, plus two actions, queueing a backtest (a JSON file in `data/jobs/`, run one at a time by a worker thread as `moon-ai backtest`) and approving or rejecting a proposal. It binds to 127.0.0.1, answers only `Host: localhost`/`127.0.0.1`, and every write needs an `X-Moon-AI: 1` header, so a web page on another site can't trigger one.
 - **After 2027-04-30, nightly pulls are pay-as-you-go,** about $0.45/month. That is when the Databento credit expires, and Databento needs a card on file then. The dashboard warns 30 days before.
 
 **Steps** (each writes a pass/fail `events` row with a plain-language message)
