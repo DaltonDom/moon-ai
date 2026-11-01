@@ -173,3 +173,18 @@ def test_cli_backtest_all_writes_a_summary(store, capsys):
     assert code == 0 and "NY AM Silver Bullet: Not enough trades" in out
     assert (store / "all" / "summary.html").exists()
     assert main(["backtest", "--from", "2026-07-13", "--to", "2026-07-14", "--no-news"]) == 2
+
+
+def test_the_kill_switch_does_not_end_a_backtest(store):
+    """It is a live/paper stop. On 7 years of real data it skipped ~90% of
+    candidates after the first drawdown, so every setup read 'not enough trades'."""
+    from dataclasses import replace
+
+    from moon_ai.config import load_config
+
+    cfg = load_config()
+    cfg = replace(cfg, risk=replace(cfg.risk, kill_switch_drawdown_pct=0.1))  # any loss trips it
+    r = bt(store, "k", config=cfg)
+    assert r.summary["statuses"] == {"skipped:session": 1, "taken": 9}
+    run = decode_json(read_run(r.folder, "runs"), "runs")[0]
+    assert run["notes"]["kill_switch"].startswith("off")

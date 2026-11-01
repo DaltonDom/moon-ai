@@ -304,7 +304,7 @@ In the journal the buckets are stored as `rule_break`, `good_won`, `good_lost`, 
 - Daily stop at −2%.
 - Flat by 16:00 ET.
 - No trading from 15 minutes before to 15 minutes after high-impact news (see [News blackout](#news-blackout)).
-- Kill switch at 10% drawdown.
+- Kill switch at 10% drawdown (paper and live; backtests run without it so a setup is judged on the whole period, and report its drawdown instead).
 - Always stricter than the prop firm's limits, with a buffer: daily stop at no more than 50% of the firm's daily limit, and never within 25% of the firm's failure line.
 - **Every entry is sent with a broker-side stop and target attached,** so the trade stays protected if the PC or internet drops.
 
