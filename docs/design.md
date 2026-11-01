@@ -466,7 +466,7 @@ uv supplies Python 3.12. Keys live in `~/.config/moon-ai/.env`, as the Databento
 ## Stack
 
 - **Engine:** a lean custom Python event loop on Polars + `databento`, behind `BarFeed` / `Broker` / `Journal` interfaces. When a stop and a target are both hit in the same bar, the stop is assumed to fill first unless 1-second bars resolve which came first. NautilusTrader is re-evaluated at Phase 3 ([engine-choice research](https://github.com/DaltonDom/moon-ai/blob/research/engine-choice/docs/research/engine-choice.md)).
-- **ML:** LightGBM; Optuna for tuning; River for drift detection.
+- **ML:** gradient-boosted trees via scikit-learn's `HistGradientBoostingClassifier` (the LightGBM algorithm; chosen over the LightGBM package because its Mac wheel needs a separate libomp install), isotonic calibration; River for drift detection.
 - **Live connection:** our own NinjaTrader 8 add-on passes bars and orders between the Python engine and NinjaTrader on the Windows PC. NinjaTrader connects to the firm over the firm's own connection: CQG/Tradovate for Lucid, Rithmic for Bulenox, Tradovate for MyFundedFutures ([NinjaTrader automation research](research/ninjatrader-automation.md)).
 - **Data:** Databento `GLBX.MDP3`.
 - **Dashboard:** FastAPI + React.
