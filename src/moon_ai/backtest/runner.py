@@ -94,6 +94,7 @@ def run_backtest(
     news_csv: Path = NEWS_CSV,
     defaults_path: Path = DEFAULTS_PATH,
     run_id: str | None = None,
+    extra_notes: dict[str, Any] | None = None,
 ) -> BacktestResult:
     """Backtest `setup` (its default, or one pre-registered rescue `trial`) over
     the trading days [start, end)."""
@@ -107,7 +108,12 @@ def run_backtest(
         params = defaults.trial_params(match[0])
     store = BarStore(store_root or config.data.store_root, config.data.dataset)
 
-    notes: dict[str, Any] = {"setup": setup, "trial": trial or "default", "symbol": symbol}
+    notes: dict[str, Any] = {
+        "setup": setup,
+        "trial": trial or "default",
+        "symbol": symbol,
+        **(extra_notes or {}),
+    }
     blackout = None
     if news:
         if not Path(news_csv).exists():

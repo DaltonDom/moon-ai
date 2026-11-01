@@ -493,6 +493,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "databento" },
+    { name = "numpy" },
     { name = "polars" },
 ]
 
@@ -505,6 +506,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "databento", specifier = ">=0.60" },
+    { name = "numpy", specifier = ">=2.0" },
     { name = "polars", specifier = ">=1.0" },
 ]
 

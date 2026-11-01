@@ -119,6 +119,16 @@ def _backtest(args: argparse.Namespace) -> int:
         return 2
     print(result.line())
     print(f"wrote {result.folder}")
+    from moon_ai.backtest.evaluate import evaluate
+
+    ev = evaluate(result.folder, store_root=args.store, config=load_config(args.config))
+    lo, hi = ev.edge_ci
+    print(
+        f"verdict: {ev.verdict} | edge vs random entries {lo:+.3f}R to {hi:+.3f}R per trade "
+        f"(95% CI) | not-just-luck (DSR) {ev.dsr:.2f} over {ev.n_trials} trial(s)"
+    )
+    for reason in ev.reasons:
+        print(f"  - {reason}")
     return 0
 
 
