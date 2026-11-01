@@ -4,14 +4,17 @@
 # ///
 """Turn a folder of trading videos into text and chart screenshots, on the Mac.
 
-    uv run scripts/media/ingest.py ~/moon-ai-media
+    uv run scripts/media/ingest.py ~/moon-ai-media --videos ~/Desktop/cm_things_to_know
+
+`--videos` is read with all its subfolders and is never changed. Without it the
+videos are expected in ~/moon-ai-media/videos.
 
 Layout (the folder lives outside the repo; none of it is ever committed):
 
     ~/moon-ai-media/
-      videos/          your downloaded videos, any of .mp4 .mov .mkv .webm .m4v
       links.txt        optional: YouTube links, one per line (or filled by --discord)
-      out/<video>/
+      youtube/         the downloaded YouTube videos
+      out/<group>/<category>/<video>/   mirrors the folders your videos are in
         transcript.txt "[mm:ss] what he says", one line per segment
         frames/        a chart screenshot every 30 s, named by time, e.g. 12-30.jpg
         done           written last; a video with it is skipped next time
@@ -19,7 +22,7 @@ Layout (the folder lives outside the repo; none of it is ever committed):
 Steps, each skipped when already done, so it can be stopped and re-run:
 1. `--discord`: read the YouTube links posted in the given channels with your own
    read-only bot (DISCORD_BOT_TOKEN in ~/.config/moon-ai/.env) into links.txt.
-2. Download every link in links.txt with yt-dlp (720p at most) into videos/.
+2. Download every link in links.txt with yt-dlp (720p at most) into youtube/.
 3. Transcribe each video locally with Whisper (mlx, Apple silicon). Nothing is
    uploaded anywhere.
 4. Save a screenshot every 30 seconds with ffmpeg.
@@ -71,6 +74,23 @@ def youtube_links(text: str) -> list[str]:
 
 def safe_stem(path: Path) -> str:
     return re.sub(r"[^\w\-. ]+", "_", path.stem).strip() or "video"
+
+
+def safe_part(name: str) -> str:
+    return re.sub(r"[^\w\-. ]+", "_", name).strip() or "_"
+
+
+def find_videos(folder: Path, out: Path) -> list[tuple[Path, Path]]:
+    """Every video under `folder`, subfolders included, with its output folder:
+    the same group/category path under `out`, ending in the video's name."""
+    if not folder.is_dir():
+        return []
+    found = []
+    for v in sorted(folder.rglob("*")):
+        if v.is_file() and v.suffix.lower() in VIDEO_EXT and not v.name.startswith("."):
+            rel = v.relative_to(folder)
+            found.append((v, out.joinpath(*map(safe_part, rel.parts[:-1]), safe_stem(v))))
+    return found
 
 
 # --- steps ---------------------------------------------------------------------------
@@ -173,7 +193,12 @@ def screenshots(video: Path, dest: Path) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    p.add_argument("root", type=Path, help="e.g. ~/moon-ai-media")
+    p.add_argument("root", type=Path, help="work folder for the output, e.g. ~/moon-ai-media")
+    p.add_argument(
+        "--videos",
+        type=Path,
+        help="where your videos are, read with all subfolders (default: <root>/videos)",
+    )
     p.add_argument(
         "--discord",
         nargs="+",
@@ -183,8 +208,12 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--no-frames", action="store_true", help="skip screenshots")
     args = p.parse_args(argv)
     root = args.root.expanduser()
-    videos, out = root / "videos", root / "out"
-    videos.mkdir(parents=True, exist_ok=True)
+    videos = (args.videos or root / "videos").expanduser()
+    youtube, out = root / "youtube", root / "out"
+    if not videos.is_dir():
+        print(f"no such folder: {videos}", file=sys.stderr)
+        return 2
+    youtube.mkdir(parents=True, exist_ok=True)
     out.mkdir(exist_ok=True)
     if not args.no_frames and shutil.which("ffmpeg") is None:
         print("ffmpeg is missing: run `brew install ffmpeg`, or pass --no-frames", file=sys.stderr)
@@ -201,22 +230,21 @@ def main(argv: list[str] | None = None) -> int:
         links_file.write_text("\n".join(dict.fromkeys(old + links)) + "\n")
         print(f"links.txt: {len(dict.fromkeys(old + links))} YouTube links", flush=True)
     if links_file.exists():
-        download_links(youtube_links(links_file.read_text()), videos)
+        download_links(youtube_links(links_file.read_text()), youtube)
 
-    todo = sorted(v for v in videos.iterdir() if v.suffix.lower() in VIDEO_EXT)
-    for i, v in enumerate(todo, 1):
-        dest = out / safe_stem(v)
+    todo = find_videos(videos, out) + find_videos(youtube, out / "youtube")
+    for i, (v, dest) in enumerate(todo, 1):
         if (dest / "done").exists():
             continue
-        dest.mkdir(exist_ok=True)
-        print(f"[{i}/{len(todo)}] {v.name}", flush=True)
+        dest.mkdir(parents=True, exist_ok=True)
+        print(f"[{i}/{len(todo)}] {dest.relative_to(out)}", flush=True)
         if not (dest / "transcript.txt").exists():
             transcribe(v, dest)
         if not args.no_frames:
             screenshots(v, dest)
-        (dest / "source.txt").write_text(v.name + "\n")
+        (dest / "source.txt").write_text(str(v) + "\n")
         (dest / "done").write_text("")
-    done = sum((out / safe_stem(v) / "done").exists() for v in todo)
+    done = sum((dest / "done").exists() for _, dest in todo)
     print(f"\n{done} of {len(todo)} videos done; output in {out}")
     return 0
 

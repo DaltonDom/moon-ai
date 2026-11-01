@@ -56,11 +56,22 @@ def test_screenshots_every_30_seconds_named_by_time(tmp_path):
     ]
 
 
-def test_finished_videos_are_skipped(tmp_path, monkeypatch):
-    (tmp_path / "videos").mkdir()
-    (tmp_path / "videos" / "a.mp4").write_bytes(b"x")
-    done = tmp_path / "out" / "a"
-    done.mkdir(parents=True)
-    (done / "done").write_text("")
+def test_subfolders_are_mirrored_and_finished_videos_skipped(tmp_path, monkeypatch):
+    src = tmp_path / "cm_things_to_know"
+    (src / "course" / "Paradigm Shift").mkdir(parents=True)
+    (src / "course" / "Paradigm Shift" / "01 Fair Value?.mp4").write_bytes(b"x")
+    (src / "model").mkdir()
+    (src / "model" / "ote.MOV").write_bytes(b"x")
+    (src / "model" / "notes.txt").write_text("not a video")
+    work = tmp_path / "work"
+    found = ingest.find_videos(src, work / "out")
+    assert [d.relative_to(work / "out").as_posix() for _, d in found] == [
+        "course/Paradigm Shift/01 Fair Value_",
+        "model/ote",
+    ]
+    for _, d in found:
+        d.mkdir(parents=True)
+        (d / "done").write_text("")
     monkeypatch.setattr(ingest, "transcribe", lambda *a: pytest.fail("re-transcribed"))
-    assert ingest.main([str(tmp_path), "--no-frames"]) == 0
+    assert ingest.main([str(work), "--videos", str(src), "--no-frames"]) == 0
+    assert list(src.rglob("*.mp4"))  # the source folder is never changed
