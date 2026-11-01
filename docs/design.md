@@ -264,6 +264,8 @@ Agreed in the grilling session for [#13](https://github.com/DaltonDom/moon-ai/is
 4. Bad setup, lucky win.
 5. Bad setup, lost — the filter should have rejected it.
 
+In the journal the buckets are stored as `rule_break`, `good_won`, `good_lost`, `bad_won` and `bad_lost`. A review's status goes `submitted` (in a batch) → `done`, or back to `pending` after a failed attempt, and `failed` after the third. Every billed Claude answer is logged as a `claude_spend` event, and the monthly cap is checked against their sum before each batch.
+
 "Good" or "bad" is Claude's judgement of whether the trade matched the setup's rules in spirit, and it must cite the feature or rule behind it.
 
 **Inputs:** the full journal entry (plan, fills, rule checks, ML probability, feature vector, MAE/MFE, R and exit reason), the setup's pinned rules from `config/defaults.toml`, and one chart image of the setup window and the trade.

@@ -4,8 +4,10 @@ version = "0.1.0"
 description = "Autonomous, self-improving ICT trading bot for CME micro futures (backtest engine, data layer, ICT primitives)."
 requires-python = ">=3.12"
 dependencies = [
+    "anthropic>=2.3",
     "databento>=0.60",
     "fastapi>=0.110",
+    "matplotlib>=3.8",
     "numpy>=2.0",
     "polars>=1.0",
     "scikit-learn>=1.5",
