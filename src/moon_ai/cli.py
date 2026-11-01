@@ -57,6 +57,9 @@ def _parser() -> argparse.ArgumentParser:
     b.add_argument("--store", type=Path, help="local bar store root")
     b.add_argument("--runs", type=Path, default=Path("data/runs"), help="where runs are written")
     b.add_argument(
+        "--no-open", action="store_true", help="don't open the report card in the browser"
+    )
+    b.add_argument(
         "--no-news",
         action="store_true",
         help="run without the news blackout (results will be optimistic)",
@@ -129,6 +132,31 @@ def _backtest(args: argparse.Namespace) -> int:
     )
     for reason in ev.reasons:
         print(f"  - {reason}")
+    stress = None
+    if ev.verdict == "go-forward":
+        from moon_ai.backtest.evaluate import stress_test
+
+        stress = stress_test(
+            args.setup,
+            args.trial,
+            args.start,
+            args.end,
+            store_root=args.store,
+            runs_root=args.runs,
+            config=load_config(args.config),
+            news=not args.no_news,
+        )
+        print(
+            f"double-slippage re-run: {'still profitable' if stress.net_r > 0 else 'loses money'}"
+        )
+    from moon_ai.backtest.report import render
+
+    page = render(ev, result.folder, stress)
+    print(f"report card: {page}")
+    if not args.no_open:
+        import webbrowser
+
+        webbrowser.open(page.resolve().as_uri())
     return 0
 
 

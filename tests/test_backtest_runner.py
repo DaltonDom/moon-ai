@@ -129,6 +129,7 @@ def test_cli_backtest_prints_a_summary(store, capsys):
             "--runs",
             str(store / "runs"),
             "--no-news",
+            "--no-open",
         ]
     )
     out = capsys.readouterr().out
