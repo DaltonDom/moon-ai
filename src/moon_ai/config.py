@@ -43,6 +43,9 @@ def _default_windows() -> dict[str, Window]:
         "asian_range": _w("20:00", "00:00"),
         "london_killzone": _w("02:00", "05:00"),
         "ny_am_killzone": _w("07:00", "10:00"),
+        # ICT's index "watching hours" (2022 Mentorship ep. 2, tmeCWULSTHc 42:38; #21).
+        # Default NY AM window of the OTE pullback and the 2022 model (#16).
+        "ny_am_index_hours": _w("08:30", "11:00"),
         "london_close_killzone": _w("10:00", "12:00"),
         "ny_pm_session": _w("13:30", "16:00"),
         "london_silver_bullet": _w("03:00", "04:00"),
