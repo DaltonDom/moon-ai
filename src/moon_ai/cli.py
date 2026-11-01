@@ -49,7 +49,12 @@ def _parser() -> argparse.ArgumentParser:
     doc.add_argument("--config", type=Path, help="TOML config overriding the defaults")
 
     b = sub.add_parser("backtest", help="backtest one setup over a date range")
-    b.add_argument("setup", help="e.g. ny_am_silver_bullet")
+    b.add_argument("setup", nargs="?", help="e.g. ny_am_silver_bullet (or use --all)")
+    b.add_argument(
+        "--all",
+        action="store_true",
+        help="run the full protocol for every setup: defaults, rescue retests, verdicts",
+    )
     b.add_argument(
         "--from",
         dest="start",
@@ -164,6 +169,12 @@ def _verify(args: argparse.Namespace) -> int:
 def _backtest(args: argparse.Namespace) -> int:
     from moon_ai.backtest.runner import NewsCalendarMissing, run_backtest
 
+    if args.all:
+        return _backtest_all(args)
+    if not args.setup:
+        print("refused: name a setup, or use --all", file=sys.stderr)
+        return 2
+
     try:
         result = run_backtest(
             args.setup,
@@ -216,6 +227,34 @@ def _backtest(args: argparse.Namespace) -> int:
         import webbrowser
 
         webbrowser.open(page.resolve().as_uri())
+    return 0
+
+
+def _backtest_all(args: argparse.Namespace) -> int:
+    from moon_ai.backtest.protocol import WORDS, judge_all
+    from moon_ai.backtest.runner import NewsCalendarMissing
+
+    try:
+        verdicts = judge_all(
+            args.start,
+            args.end,
+            args.runs,
+            store_root=args.store,
+            config=load_config(args.config),
+            news=not args.no_news,
+        )
+    except NewsCalendarMissing as exc:
+        print(f"refused: {exc}", file=sys.stderr)
+        return 2
+    for v in verdicts:
+        how = "" if v.trial == "default" else f" with retest {v.trial}"
+        print(f"{v.title}: {WORDS[v.verdict][0]}{how} ({len(v.trials_run)} version(s) tested)")
+    summary = args.runs / "summary.html"
+    print(f"summary: {summary}")
+    if not args.no_open:
+        import webbrowser
+
+        webbrowser.open(summary.resolve().as_uri())
     return 0
 
 
