@@ -241,3 +241,11 @@ def test_diagnose_splits_survive_lumpy_features():
     )
     out = "\n".join(splits(df))
     assert "stop_ticks (fifths)" in out and "bias_agree_count (fifths)" in out
+
+
+def test_a_round2_trial_runs_and_evaluates(store):
+    from moon_ai.backtest.evaluate import evaluate
+
+    r = bt(store, "ny_am_silver_bullet.min_rr_2.x.1", trial="min_rr_2")
+    ev = evaluate(r.folder, store_root=store / "bars")
+    assert ev.metrics.trades == r.summary["trades"] > 0

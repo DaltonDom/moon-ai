@@ -114,7 +114,7 @@ def evaluate(
     defaults = load_setup_defaults()[setup]
     params = defaults.params
     if trial != "default":
-        params = defaults.trial_params(next(t for t in defaults.rescue if t.name == trial))
+        params = defaults.trial_params(defaults.trial(trial))
     cands = {
         c["candidate_id"]: c for c in decode_json(read_run(folder, "candidates"), "candidates")
     }

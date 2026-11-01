@@ -110,7 +110,7 @@ def run_backtest(
     defaults = load_setup_defaults(defaults_path)[setup]
     params = defaults.params
     if trial is not None:
-        match = [t for t in (*defaults.rescue, *defaults.round2) if t.name == trial]
+        match = [t for t in defaults.all_trials if t.name == trial]
         if not match:
             raise ValueError(f"{setup} has no pre-registered rescue trial {trial!r}")
         params = defaults.trial_params(match[0])

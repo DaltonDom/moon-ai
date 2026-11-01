@@ -24,7 +24,9 @@ def fake_hooks(script, stress_r=1.0):
         return NS(folder=Path(f"/tmp/{trial or 'default'}"))
 
     def evaluate(folder, **kw):
-        return ev(script.get(folder.name, "fail"), [f"{folder.name} failed"])
+        # A real run folder is "<setup>.<trial>.<window>.<stamp>"; a fake one is "<trial>".
+        name = folder.name.split(".")[1] if "." in folder.name else folder.name
+        return ev(script.get(name, "fail"), [f"{name} failed"])
 
     hooks = Hooks(
         run=run,
@@ -134,3 +136,51 @@ def _fake_run(root, setup, trial):
             "notes": {"setup": setup, "trial": trial},
         },
     ).write()
+
+
+def test_round2_trials_resolve_everywhere_a_rescue_trial_does():
+    """On the Mac, evaluate() looked only in `rescue`, so min_rr_2 crashed with StopIteration."""
+    d = load_setup_defaults()["ny_am_silver_bullet"]
+    assert d.trial("min_rr_2").changes == {"min_rr": 2.0}
+    assert d.trial("displacement_k_1.0") in d.rescue
+    assert [t.name for t in d.all_trials][-2:] == ["min_rr_2", "timeframe_5m"]
+
+
+def test_round2_scores_a_logged_but_unjudged_run_instead_of_rerunning(tmp_path):
+    """The Mac's round 2 crashed after writing min_rr_2's run but before judging it."""
+    import json
+
+    from moon_ai.backtest.protocol import judge_round2
+
+    d = load_setup_defaults()["ny_am_silver_bullet"]
+    judged = ["default", *(t.name for t in d.rescue if t.name != "first_tethered_fvg")]
+    (tmp_path / "verdicts.json").write_text(
+        json.dumps(
+            {
+                "window": [str(START), str(END)],
+                "setups": [
+                    {
+                        "setup": "ny_am_silver_bullet",
+                        "title": d.title,
+                        "verdict": "retired",
+                        "trial": "default",
+                        "reasons": ["x"],
+                        "report": "r",
+                        "trials_run": judged,
+                        "checks": {},
+                    }
+                ],
+            }
+        )
+    )
+    _fake_run(tmp_path, "ny_am_silver_bullet", "min_rr_2")  # logged, never judged
+    hooks, ran = fake_hooks({"min_rr_2": "go-forward"})
+    lines: list[str] = []
+    out = judge_round2(
+        START, END, tmp_path, hooks=hooks, setups=["ny_am_silver_bullet"], say=lines.append
+    )
+    assert ran == []  # nothing re-run: the logged run was scored
+    assert out == [("ny_am_silver_bullet", "min_rr_2", True)]
+    assert any("min_rr_2: already run, scoring that run" in ln for ln in lines)
+    saved = json.loads((tmp_path / "verdicts.json").read_text())["setups"][0]
+    assert saved["verdict"] == "go-forward" and saved["trial"] == "min_rr_2"
