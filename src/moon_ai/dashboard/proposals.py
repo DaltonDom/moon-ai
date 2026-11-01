@@ -29,6 +29,13 @@ API = "https://api.github.com"
 
 class GitHub(Protocol):
     def proposals(self) -> list[dict[str, Any]]: ...
+    def create_issue(self, title: str, body: str, labels: list[str]) -> dict[str, Any]:
+        r = self.http.post(
+            f"/repos/{self.repo}/issues", json={"title": title, "body": body, "labels": labels}
+        )
+        r.raise_for_status()
+        return r.json()
+
     def add_label(self, number: int, label: str) -> None: ...
     def comment(self, number: int, body: str) -> None: ...
     def close(self, number: int, reason: str) -> None: ...

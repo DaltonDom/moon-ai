@@ -107,7 +107,7 @@ TABLES: dict[str, dict[str, ColType]] = {
     "reviews": {
         "candidate_id": "text",
         "run_id": "text",
-        "status": "text",  # pending | done | failed
+        "status": "text",  # submitted | pending | done | failed
         "attempts": "int",
         "bucket": "text",
         "fields": "json",

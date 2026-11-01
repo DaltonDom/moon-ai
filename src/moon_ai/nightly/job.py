@@ -103,6 +103,9 @@ class NightlyJob:
         symbol: str = "MNQ.v.0",
         news_csv: Path = NEWS_CSV,
         refresh_news: Callable[[], StepResult] | None = None,
+        claude_factory: Callable[[], Any] | None = None,
+        github_factory: Callable[[], Any] | None = None,
+        reports: Path | None = None,
     ):
         self.paths = paths or Paths()
         self.config = config or load_config()
@@ -112,6 +115,10 @@ class NightlyJob:
         self.symbol = symbol
         self.news_csv = news_csv
         self.refresh_news = refresh_news or self._news_builder
+        self.claude_factory = claude_factory if claude_factory is not None else _claude_from_env()
+        self.github_factory = github_factory if github_factory is not None else _github_from_env()
+        # Beside the data folder: `reports/weekly/` in the repo for the real `data/`.
+        self.reports = reports or self.paths.root.parent / "reports" / "weekly"
 
     # --- helpers --------------------------------------------------------------------
 
@@ -220,7 +227,9 @@ class NightlyJob:
         out.append(self.news())
         replays = [self.replay(db, s) for s in ready] if out[1].status != "fail" else []
         out.extend(replays or [StepResult("replay", "ok", "No new session to replay.")])
-        out.append(StepResult("reviews", "skipped", "Claude trade reviews aren't built yet."))
+        out.append(self.reviews(db))
+        if to_ny(self.now()).weekday() == 5:
+            out.append(self.weekly(db))
         out.append(self.models(db))
         out.append(self.housekeeping())
         out.append(self.summary(db, out))
@@ -386,6 +395,65 @@ class NightlyJob:
             {"session": session.isoformat(), "candidates": len(new), "taken": taken},
         )
 
+    def reviews(self, db: SQLiteStore) -> StepResult:
+        """Collect last night's Claude reviews and send tonight's. Never blocks trading."""
+        if self.claude_factory is None:
+            return StepResult(
+                "reviews",
+                "skipped",
+                "No Claude API key (ANTHROPIC_API_KEY), so trades aren't reviewed.",
+            )
+        from moon_ai.review.claude import Reviewer
+
+        store = BarStore(self.paths.bars, self.config.data.dataset)
+
+        def bars_for(cand, trade):
+            from moon_ai.review.charts import window
+
+            lo, hi = window(cand, trade)
+            return store.load(cand["symbol"], lo, hi)
+
+        try:
+            res = Reviewer(
+                db,
+                PAPER_RUN,
+                self.config,
+                self.claude_factory(),
+                self.paths.root / "charts",
+                bars_for=bars_for,
+                now=self.now,
+            ).run()
+        except Exception as exc:  # an API outage must not fail the night
+            return StepResult(
+                "reviews", "warn", f"Claude reviews didn't run ({exc}); retried tomorrow."
+            )
+        if res.capped:
+            self.notify("moon-ai: Claude review cap reached", res.message())
+        return StepResult(
+            "reviews",
+            "warn" if res.capped or res.failed else "ok",
+            res.message(),
+            {"cost_usd": res.cost_usd},
+        )
+
+    def weekly(self, db: SQLiteStore) -> StepResult:
+        from moon_ai.review.weekly import write_weekly
+
+        try:
+            path, notes = write_weekly(
+                db,
+                PAPER_RUN,
+                to_ny(self.now()).date(),
+                self.reports,
+                self.claude_factory,
+                self.github_factory,
+                now=self.now,
+            )
+        except Exception as exc:
+            return StepResult("weekly", "warn", f"The weekly report failed ({exc}).")
+        extra = (" " + "; ".join(notes) + ".") if notes else ""
+        return StepResult("weekly", "ok", f"Weekly report written: {path.name}.{extra}")
+
     def _paper_pnl(self, db: SQLiteStore) -> float:
         return sum(t["net_usd"] or 0.0 for t in decode_json(db.read("trades", PAPER_RUN), "trades"))
 
@@ -428,6 +496,26 @@ class NightlyJob:
             "fail" if bad else "ok",
             f"{head} Paper account: {len(trades)} trades, ${total:+,.0f}. {champ}",
         )
+
+
+def _claude_from_env() -> Callable[[], Any] | None:
+    if not (os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN")):
+        return None
+
+    def make() -> Any:
+        import anthropic
+
+        return anthropic.Anthropic()
+
+    return make
+
+
+def _github_from_env() -> Callable[[], Any] | None:
+    if not os.environ.get("GITHUB_TOKEN"):
+        return None
+    from moon_ai.dashboard.proposals import RestGitHub
+
+    return RestGitHub
 
 
 def notify_user(title: str, message: str) -> None:
