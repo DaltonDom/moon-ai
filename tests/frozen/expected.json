@@ -1,0 +1,430 @@
+{
+ "setups": {
+  "ict_2022_model": {
+   "candidates": [],
+   "trades": []
+  },
+  "london_sweep_and_reverse": {
+   "candidates": [],
+   "trades": []
+  },
+  "ny_am_silver_bullet": {
+   "candidates": [
+    {
+     "candidate_id": "ny_am_silver_bullet:2026-09-29T14:18:00+00:00:long",
+     "entry": 30633.5,
+     "status": "taken",
+     "stop": 30597.5,
+     "tags": [],
+     "target": 30663.0
+    },
+    {
+     "candidate_id": "ny_am_silver_bullet:2026-10-06T14:25:00+00:00:short",
+     "entry": 31543.25,
+     "status": "taken",
+     "stop": 31568.25,
+     "tags": [],
+     "target": 31525.25
+    },
+    {
+     "candidate_id": "ny_am_silver_bullet:2026-10-15T14:59:00+00:00:long",
+     "entry": 29950.25,
+     "status": "unfilled",
+     "stop": 29898.0,
+     "tags": [],
+     "target": 30159.0
+    },
+    {
+     "candidate_id": "ny_am_silver_bullet:2026-10-16T14:53:00+00:00:short",
+     "entry": 29899.75,
+     "status": "unfilled",
+     "stop": 29930.75,
+     "tags": [],
+     "target": 29879.5
+    }
+   ],
+   "trades": [
+    {
+     "candidate_id": "ny_am_silver_bullet:2026-09-29T14:18:00+00:00:long",
+     "entry_price": 30633.5,
+     "entry_time": "2026-09-29T14:21:00+00:00",
+     "exit_price": 30663.0,
+     "exit_reason": "target",
+     "exit_time": "2026-09-29T14:23:00+00:00",
+     "net_usd": 342.0,
+     "r": 0.791667
+    },
+    {
+     "candidate_id": "ny_am_silver_bullet:2026-10-06T14:25:00+00:00:short",
+     "entry_price": 31543.25,
+     "entry_time": "2026-10-06T14:42:00+00:00",
+     "exit_price": 31569.0,
+     "exit_reason": "stop",
+     "exit_time": "2026-10-06T14:44:00+00:00",
+     "net_usd": -535.0,
+     "r": -1.07
+    }
+   ]
+  },
+  "ny_pm_silver_bullet": {
+   "candidates": [
+    {
+     "candidate_id": "ny_pm_silver_bullet:2026-09-28T18:19:00+00:00:short",
+     "entry": 30632.75,
+     "status": "taken",
+     "stop": 30646.0,
+     "tags": [],
+     "target": 30601.5
+    },
+    {
+     "candidate_id": "ny_pm_silver_bullet:2026-10-01T18:25:00+00:00:long",
+     "entry": 30780.5,
+     "status": "taken",
+     "stop": 30733.5,
+     "tags": [],
+     "target": 30804.25
+    },
+    {
+     "candidate_id": "ny_pm_silver_bullet:2026-10-14T18:07:00+00:00:long",
+     "entry": 30142.0,
+     "status": "taken",
+     "stop": 30132.75,
+     "tags": [],
+     "target": 30167.75
+    },
+    {
+     "candidate_id": "ny_pm_silver_bullet:2026-10-20T18:55:00+00:00:long",
+     "entry": 29701.5,
+     "status": "unfilled",
+     "stop": 29669.5,
+     "tags": [],
+     "target": 29757.0
+    },
+    {
+     "candidate_id": "ny_pm_silver_bullet:2026-10-21T18:44:00+00:00:short",
+     "entry": 30080.5,
+     "status": "unfilled",
+     "stop": 30082.5,
+     "tags": [],
+     "target": 30054.25
+    }
+   ],
+   "trades": [
+    {
+     "candidate_id": "ny_pm_silver_bullet:2026-09-28T18:19:00+00:00:short",
+     "entry_price": 30632.75,
+     "entry_time": "2026-09-28T18:49:00+00:00",
+     "exit_price": 30646.75,
+     "exit_reason": "stop",
+     "exit_time": "2026-09-28T18:54:00+00:00",
+     "net_usd": -540.0,
+     "r": -1.132075
+    },
+    {
+     "candidate_id": "ny_pm_silver_bullet:2026-10-01T18:25:00+00:00:long",
+     "entry_price": 30780.5,
+     "entry_time": "2026-10-01T18:26:00+00:00",
+     "exit_price": 30804.25,
+     "exit_reason": "target",
+     "exit_time": "2026-10-01T18:30:00+00:00",
+     "net_usd": 227.5,
+     "r": 0.484043
+    },
+    {
+     "candidate_id": "ny_pm_silver_bullet:2026-10-14T18:07:00+00:00:long",
+     "entry_price": 30142.0,
+     "entry_time": "2026-10-14T18:11:00+00:00",
+     "exit_price": 30167.75,
+     "exit_reason": "target",
+     "exit_time": "2026-10-14T18:14:00+00:00",
+     "net_usd": 1287.0,
+     "r": 2.675676
+    }
+   ]
+  },
+  "ote_pullback": {
+   "candidates": [
+    {
+     "candidate_id": "ote_pullback:2026-09-28T13:38:00+00:00:short",
+     "entry": 30705.25,
+     "status": "unfilled",
+     "stop": 30759.5,
+     "tags": [],
+     "target": 30617.25
+    },
+    {
+     "candidate_id": "ote_pullback:2026-09-29T13:37:00+00:00:short",
+     "entry": 30672.5,
+     "status": "taken",
+     "stop": 30725.5,
+     "tags": [],
+     "target": 30586.75
+    },
+    {
+     "candidate_id": "ote_pullback:2026-09-30T12:34:00+00:00:long",
+     "entry": 30634.25,
+     "status": "skipped:blackout",
+     "stop": 30545.25,
+     "tags": [],
+     "target": 30779.25
+    },
+    {
+     "candidate_id": "ote_pullback:2026-10-01T13:10:00+00:00:long",
+     "entry": 30831.75,
+     "status": "taken",
+     "stop": 30815.5,
+     "tags": [],
+     "target": 30858.0
+    },
+    {
+     "candidate_id": "ote_pullback:2026-10-02T12:32:00+00:00:long",
+     "entry": 31017.5,
+     "status": "unfilled",
+     "stop": 30960.5,
+     "tags": [],
+     "target": 31110.0
+    },
+    {
+     "candidate_id": "ote_pullback:2026-10-05T13:45:00+00:00:long",
+     "entry": 31082.5,
+     "status": "unfilled",
+     "stop": 31003.25,
+     "tags": [],
+     "target": 31211.5
+    },
+    {
+     "candidate_id": "ote_pullback:2026-10-06T12:54:00+00:00:long",
+     "entry": 31471.25,
+     "status": "taken",
+     "stop": 31455.25,
+     "tags": [],
+     "target": 31496.75
+    },
+    {
+     "candidate_id": "ote_pullback:2026-10-07T13:41:00+00:00:short",
+     "entry": 31228.0,
+     "status": "taken",
+     "stop": 31276.25,
+     "tags": [],
+     "target": 31150.0
+    },
+    {
+     "candidate_id": "ote_pullback:2026-10-08T12:32:00+00:00:short",
+     "entry": 31206.5,
+     "status": "taken",
+     "stop": 31220.0,
+     "tags": [],
+     "target": 31185.0
+    },
+    {
+     "candidate_id": "ote_pullback:2026-10-09T12:38:00+00:00:short",
+     "entry": 31195.5,
+     "status": "taken",
+     "stop": 31211.25,
+     "tags": [],
+     "target": 31170.25
+    },
+    {
+     "candidate_id": "ote_pullback:2026-10-12T12:41:00+00:00:long",
+     "entry": 31029.0,
+     "status": "taken",
+     "stop": 31017.75,
+     "tags": [],
+     "target": 31047.0
+    },
+    {
+     "candidate_id": "ote_pullback:2026-10-14T12:33:00+00:00:short",
+     "entry": 30769.0,
+     "status": "unfilled",
+     "stop": 30860.25,
+     "tags": [],
+     "target": 30620.25
+    },
+    {
+     "candidate_id": "ote_pullback:2026-10-15T12:32:00+00:00:short",
+     "entry": 29811.25,
+     "status": "taken",
+     "stop": 29877.5,
+     "tags": [],
+     "target": 29703.25
+    },
+    {
+     "candidate_id": "ote_pullback:2026-10-16T13:27:00+00:00:long",
+     "entry": 30048.75,
+     "status": "taken",
+     "stop": 30030.25,
+     "tags": [],
+     "target": 30078.5
+    },
+    {
+     "candidate_id": "ote_pullback:2026-10-19T14:48:00+00:00:long",
+     "entry": 29815.75,
+     "status": "taken",
+     "stop": 29787.0,
+     "tags": [],
+     "target": 29862.5
+    },
+    {
+     "candidate_id": "ote_pullback:2026-10-20T13:35:00+00:00:short",
+     "entry": 29566.25,
+     "status": "taken",
+     "stop": 29606.75,
+     "tags": [],
+     "target": 29500.75
+    },
+    {
+     "candidate_id": "ote_pullback:2026-10-21T13:03:00+00:00:long",
+     "entry": 29855.5,
+     "status": "taken",
+     "stop": 29837.5,
+     "tags": [],
+     "target": 29884.5
+    },
+    {
+     "candidate_id": "ote_pullback:2026-10-23T12:34:00+00:00:short",
+     "entry": 29081.25,
+     "status": "taken",
+     "stop": 29095.0,
+     "tags": [],
+     "target": 29059.25
+    }
+   ],
+   "trades": [
+    {
+     "candidate_id": "ote_pullback:2026-09-29T13:37:00+00:00:short",
+     "entry_price": 30672.5,
+     "entry_time": "2026-09-29T14:24:00+00:00",
+     "exit_price": 30586.75,
+     "exit_reason": "target",
+     "exit_time": "2026-09-29T15:20:00+00:00",
+     "net_usd": 678.0,
+     "r": 1.599057
+    },
+    {
+     "candidate_id": "ote_pullback:2026-10-01T13:10:00+00:00:long",
+     "entry_price": 30831.75,
+     "entry_time": "2026-10-01T13:15:00+00:00",
+     "exit_price": 30814.75,
+     "exit_reason": "stop",
+     "exit_time": "2026-10-01T13:17:00+00:00",
+     "net_usd": -540.0,
+     "r": -1.107692
+    },
+    {
+     "candidate_id": "ote_pullback:2026-10-06T12:54:00+00:00:long",
+     "entry_price": 31471.25,
+     "entry_time": "2026-10-06T13:37:00+00:00",
+     "exit_price": 31496.75,
+     "exit_reason": "target",
+     "exit_time": "2026-10-06T13:39:00+00:00",
+     "net_usd": 735.0,
+     "r": 1.53125
+    },
+    {
+     "candidate_id": "ote_pullback:2026-10-07T13:41:00+00:00:short",
+     "entry_price": 31228.0,
+     "entry_time": "2026-10-07T13:59:00+00:00",
+     "exit_price": 31277.0,
+     "exit_reason": "stop",
+     "exit_time": "2026-10-07T14:26:00+00:00",
+     "net_usd": -500.0,
+     "r": -1.036269
+    },
+    {
+     "candidate_id": "ote_pullback:2026-10-08T12:32:00+00:00:short",
+     "entry_price": 31206.5,
+     "entry_time": "2026-10-08T13:02:00+00:00",
+     "exit_price": 31220.75,
+     "exit_reason": "stop",
+     "exit_time": "2026-10-08T13:05:00+00:00",
+     "net_usd": -549.0,
+     "r": -1.12963
+    },
+    {
+     "candidate_id": "ote_pullback:2026-10-09T12:38:00+00:00:short",
+     "entry_price": 31195.5,
+     "entry_time": "2026-10-09T13:01:00+00:00",
+     "exit_price": 31212.0,
+     "exit_reason": "stop",
+     "exit_time": "2026-10-09T13:08:00+00:00",
+     "net_usd": -525.0,
+     "r": -1.111111
+    },
+    {
+     "candidate_id": "ote_pullback:2026-10-12T12:41:00+00:00:long",
+     "entry_price": 31029.0,
+     "entry_time": "2026-10-12T13:31:00+00:00",
+     "exit_price": 31017.0,
+     "exit_reason": "stop",
+     "exit_time": "2026-10-12T13:31:00+00:00",
+     "net_usd": -546.0,
+     "r": -1.155556
+    },
+    {
+     "candidate_id": "ote_pullback:2026-10-15T12:32:00+00:00:short",
+     "entry_price": 29811.25,
+     "entry_time": "2026-10-15T12:33:00+00:00",
+     "exit_price": 29703.25,
+     "exit_reason": "target",
+     "exit_time": "2026-10-15T13:31:00+00:00",
+     "net_usd": 642.0,
+     "r": 1.615094
+    },
+    {
+     "candidate_id": "ote_pullback:2026-10-16T13:27:00+00:00:long",
+     "entry_price": 30048.75,
+     "entry_time": "2026-10-16T13:28:00+00:00",
+     "exit_price": 30029.5,
+     "exit_reason": "stop",
+     "exit_time": "2026-10-16T13:30:00+00:00",
+     "net_usd": -526.5,
+     "r": -1.094595
+    },
+    {
+     "candidate_id": "ote_pullback:2026-10-19T14:48:00+00:00:long",
+     "entry_price": 29815.75,
+     "entry_time": "2026-10-19T14:51:00+00:00",
+     "exit_price": 29862.5,
+     "exit_reason": "target",
+     "exit_time": "2026-10-19T15:01:00+00:00",
+     "net_usd": 732.0,
+     "r": 1.591304
+    },
+    {
+     "candidate_id": "ote_pullback:2026-10-20T13:35:00+00:00:short",
+     "entry_price": 29566.25,
+     "entry_time": "2026-10-20T13:38:00+00:00",
+     "exit_price": 29500.75,
+     "exit_reason": "target",
+     "exit_time": "2026-10-20T13:40:00+00:00",
+     "net_usd": 774.0,
+     "r": 1.592593
+    },
+    {
+     "candidate_id": "ote_pullback:2026-10-21T13:03:00+00:00:long",
+     "entry_price": 29855.5,
+     "entry_time": "2026-10-21T13:12:00+00:00",
+     "exit_price": 29884.5,
+     "exit_reason": "target",
+     "exit_time": "2026-10-21T13:26:00+00:00",
+     "net_usd": 728.0,
+     "r": 1.555556
+    },
+    {
+     "candidate_id": "ote_pullback:2026-10-23T12:34:00+00:00:short",
+     "entry_price": 29081.25,
+     "entry_time": "2026-10-23T12:39:00+00:00",
+     "exit_price": 29059.25,
+     "exit_reason": "target",
+     "exit_time": "2026-10-23T12:41:00+00:00",
+     "net_usd": 756.0,
+     "r": 1.527273
+    }
+   ]
+  }
+ },
+ "window": [
+  "2026-09-28",
+  "2026-10-24"
+ ]
+}

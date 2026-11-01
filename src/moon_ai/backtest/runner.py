@@ -95,6 +95,7 @@ def run_backtest(
     defaults_path: Path = DEFAULTS_PATH,
     run_id: str | None = None,
     extra_notes: dict[str, Any] | None = None,
+    second_bars: bool = True,
 ) -> BacktestResult:
     """Backtest `setup` (its default, or one pre-registered rescue `trial`) over
     the trading days [start, end)."""
@@ -163,7 +164,8 @@ def run_backtest(
         datetime.combine(start - timedelta(days=1), session_open, tzinfo=NY),
         datetime.combine(end - timedelta(days=1), session_open, tzinfo=NY),
     )
-    broker = SimBroker(config.broker, config.instrument, SecondBarLookup(store))
+    lookup = SecondBarLookup(store) if second_bars else None
+    broker = SimBroker(config.broker, config.instrument, lookup)
     run(feed, broker, trader, trader.tap(journal))
     trader.finish()
     folder = parquet.write()
