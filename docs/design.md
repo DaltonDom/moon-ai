@@ -345,7 +345,7 @@ Decided in [Nightly run on the Mac: schedule, steps, and how the user knows it w
 
   The embargo a usage-only account actually sees is still UNVERIFIED: on 2026-10-31, `get_dataset_range` reported data up to 8 hours old, but the market was closed. The first week's runs record it.
 - **The Mac doesn't have to stay awake.** If it is asleep at 18:30, launchd runs the job when it wakes; if it was off, the next day's run catches up. `doctor` warns when no run has finished in 36 hours.
-- **The dashboard is installed as a second agent** that keeps `http://localhost:8000` up, so it is always one bookmark away.
+- **The dashboard is installed as a second agent** (`moon-ai dashboard install`) that keeps `http://localhost:8000` up, so it is always one bookmark away.
 - **Dashboard API** (`moon-ai dashboard`, `src/moon_ai/dashboard/`): read-only JSON for the six pages under `/api/`, plus two actions, queueing a backtest (a JSON file in `data/jobs/`, run one at a time by a worker thread as `moon-ai backtest`) and approving or rejecting a proposal. It binds to 127.0.0.1, answers only `Host: localhost`/`127.0.0.1`, and every write needs an `X-Moon-AI: 1` header, so a web page on another site can't trigger one.
 - **After 2027-04-30, nightly pulls are pay-as-you-go,** about $0.45/month. That is when the Databento credit expires, and Databento needs a card on file then. The dashboard warns 30 days before.
 
@@ -404,7 +404,7 @@ Decided in [Repo layout, engine interfaces and the Mac dev setup](https://github
 | `ml/` | features, labels, training, model registry (champion/challenger), drift monitors |
 | `review/` | Claude trade reviews and the weekly report |
 | `nightly/` | the nightly job and its launchd install (see the nightly-run ticket) |
-| `dashboard/` | FastAPI app plus the built React files, so the Mac needs no Node |
+| `dashboard/` | FastAPI app plus the UI in plain HTML, CSS and JavaScript (no build step, so the Mac needs no Node) |
 | `watcher/` | the monthly ICT watcher |
 | `bridge/` | Phase 3 Python side of the NinjaTrader link; the C# add-on lives in `ninjatrader/` at the repo root |
 
@@ -471,7 +471,7 @@ uv supplies Python 3.12. Keys live in `~/.config/moon-ai/.env`, as the Databento
 - **ML:** gradient-boosted trees via scikit-learn's `HistGradientBoostingClassifier` (the LightGBM algorithm; chosen over the LightGBM package because its Mac wheel needs a separate libomp install), isotonic calibration; ADWIN drift detection written in `ml/promotion.py` (River has no Apple Silicon wheel for its current version).
 - **Live connection:** our own NinjaTrader 8 add-on passes bars and orders between the Python engine and NinjaTrader on the Windows PC. NinjaTrader connects to the firm over the firm's own connection: CQG/Tradovate for Lucid, Rithmic for Bulenox, Tradovate for MyFundedFutures ([NinjaTrader automation research](research/ninjatrader-automation.md)).
 - **Data:** Databento `GLBX.MDP3`.
-- **Dashboard:** FastAPI + React.
+- **Dashboard:** FastAPI, with a plain-JavaScript UI. React was dropped: six read-mostly pages need no framework or build step.
 - **Charts:** TradingView for viewing and verification.
 - **Reviews:** Claude API with structured outputs, run nightly through the Batch API.
 - **Alerts:** a single safety alert, live accounts only, sent when the kill switch fires or the connection is lost with a position open.

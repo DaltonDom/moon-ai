@@ -478,3 +478,41 @@ def test_stage_rules():
 def test_money_stats_with_no_trades():
     s = data.money_stats([], 50_000)
     assert s["trades"] == 0 and s["profit_factor"] is None and s["max_dip_pct"] == 0
+
+
+# --- the UI and its launch agent ----------------------------------------------------
+
+UI = Path(__file__).resolve().parents[1] / "src" / "moon_ai" / "dashboard" / "ui"
+
+
+def test_the_ui_is_served_beside_the_api(tmp_path):
+    paths = make_journal(tmp_path)
+    app = create_app(paths=paths, config=CFG, static_dir=UI, now=lambda: NOW)
+    c = TestClient(app, base_url="http://localhost")
+    page = c.get("/")
+    assert page.status_code == 200 and '<script src="app.js">' in page.text
+    assert c.get("/app.js").status_code == 200 and c.get("/style.css").status_code == 200
+    assert c.get("/api/health").status_code == 200  # the static mount doesn't shadow the API
+
+
+def test_the_ui_calls_only_endpoints_that_exist():
+    import re
+
+    js = (UI / "app.js").read_text()
+    used = set(re.findall(r'api\("([a-z]+)', js)) | set(re.findall(r'post\(\s*[`"]([a-z]+)', js))
+    routes = {
+        r.path.split("/")[2] for r in create_app(config=CFG).routes if r.path.startswith("/api/")
+    }
+    assert used and used <= routes
+
+
+def test_the_dashboard_agent_stays_up(tmp_path):
+    import plistlib
+
+    from moon_ai.nightly import launchd
+
+    path = launchd.install(tmp_path, repo=tmp_path, load=False, label=launchd.DASHBOARD_LABEL)
+    p = plistlib.loads(path.read_bytes())
+    assert p["Label"] == "com.moonai.dashboard" and p["KeepAlive"] and p["RunAtLoad"]
+    assert p["ProgramArguments"][-2:] == ["moon-ai", "dashboard"]
+    assert launchd.uninstall(tmp_path, unload=False, label=launchd.DASHBOARD_LABEL)

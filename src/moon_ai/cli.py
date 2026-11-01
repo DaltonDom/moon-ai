@@ -52,6 +52,7 @@ def _parser() -> argparse.ArgumentParser:
     ng.add_argument("--data", type=Path, default=Path("data"), help="data folder")
 
     db = sub.add_parser("dashboard", help="serve the dashboard at http://localhost:8000")
+    db.add_argument("action", nargs="?", default="serve", choices=["serve", "install", "uninstall"])
     db.add_argument("--port", type=int, default=8000)
     db.add_argument("--data", type=Path, default=Path("data"), help="data folder")
 
@@ -169,6 +170,22 @@ def main(
 
 
 def _dashboard(args: argparse.Namespace) -> int:
+    if args.action in ("install", "uninstall"):
+        from moon_ai.nightly import launchd
+
+        if sys.platform != "darwin":
+            print(
+                "refused: the dashboard agent uses macOS launchd; run this on the Mac",
+                file=sys.stderr,
+            )
+            return 2
+        if args.action == "install":
+            launchd.install(label=launchd.DASHBOARD_LABEL)
+            print("Installed: the dashboard stays up at http://localhost:8000. Bookmark it.")
+        else:
+            gone = launchd.uninstall(label=launchd.DASHBOARD_LABEL)
+            print("Removed the dashboard agent." if gone else "It wasn't installed.")
+        return 0
     import uvicorn
 
     from moon_ai.dashboard.api import create_app

@@ -42,12 +42,35 @@ def plist(repo: Path = REPO, uv: str | None = None) -> dict:
     }
 
 
-def install(agents: Path = AGENTS, repo: Path = REPO, load: bool = True) -> Path:
+DASHBOARD_LABEL = "com.moonai.dashboard"
+
+
+def dashboard_plist(repo: Path = REPO, uv: str | None = None) -> dict:
+    """Keeps `moon-ai dashboard` up at http://localhost:8000: started at login,
+    restarted if it stops."""
+    uv = uv or shutil.which("uv") or "uv"
+    logs = repo / "data" / "logs"
+    return {
+        "Label": DASHBOARD_LABEL,
+        "ProgramArguments": [uv, "run", "--project", str(repo), "moon-ai", "dashboard"],
+        "WorkingDirectory": str(repo),
+        "RunAtLoad": True,
+        "KeepAlive": True,
+        "ThrottleInterval": 30,
+        "StandardOutPath": str(logs / "dashboard.log"),
+        "StandardErrorPath": str(logs / "dashboard.log"),
+        "EnvironmentVariables": {"PATH": os.environ.get("PATH", "/usr/bin:/bin")},
+    }
+
+
+def install(
+    agents: Path = AGENTS, repo: Path = REPO, load: bool = True, label: str = LABEL
+) -> Path:
     agents.mkdir(parents=True, exist_ok=True)
     (repo / "data" / "logs").mkdir(parents=True, exist_ok=True)
-    path = agents / f"{LABEL}.plist"
+    path = agents / f"{label}.plist"
     with path.open("wb") as fh:
-        plistlib.dump(plist(repo), fh)
+        plistlib.dump(dashboard_plist(repo) if label == DASHBOARD_LABEL else plist(repo), fh)
     if load:
         uid = os.getuid()
         subprocess.run(["launchctl", "bootout", f"gui/{uid}", str(path)], capture_output=True)
@@ -55,8 +78,8 @@ def install(agents: Path = AGENTS, repo: Path = REPO, load: bool = True) -> Path
     return path
 
 
-def uninstall(agents: Path = AGENTS, unload: bool = True) -> bool:
-    path = agents / f"{LABEL}.plist"
+def uninstall(agents: Path = AGENTS, unload: bool = True, label: str = LABEL) -> bool:
+    path = agents / f"{label}.plist"
     if not path.exists():
         return False
     if unload:
