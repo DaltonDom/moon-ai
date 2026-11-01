@@ -25,6 +25,7 @@ from moon_ai.journal.schema import candidate_id
 
 DEFAULTS_PATH = Path(__file__).resolve().parents[3] / "config" / "defaults.toml"
 MAX_RESCUE_TRIALS = 12
+MAX_ROUND2_TRIALS = 4
 
 Side = Literal["long", "short"]
 
@@ -52,6 +53,10 @@ class SetupParams:
     stop_offset_ticks: int = 1  # stop = sweep extreme +/- this
     # Minimum move on offer from entry to the draw on liquidity (not a take-profit).
     min_objective_points: float | None = None
+    # Round 2 (2026-11-01, after the first results; see docs/research/why-losing.md):
+    min_rr: float | None = None  # skip a plan whose reward:risk to the target is below this
+    timeframe: int = 1  # minutes per bar the patterns are read from (entries still fill on 1m)
+    min_leg_points: float | None = None  # OTE: skip legs shorter than this
     ote_entry: float | None = None
     ote_stop: float | None = None
     require_ote_overlap: bool = False
@@ -75,6 +80,8 @@ class SetupDefaults:
     title: str
     params: SetupParams
     rescue: tuple[RescueTrial, ...] = ()
+    # Round 2, registered 2026-11-01 after every setup failed (docs/research/why-losing.md).
+    round2: tuple[RescueTrial, ...] = ()
 
     def trial_params(self, trial: RescueTrial) -> SetupParams:
         return _apply(self.params, trial.changes, f"setups.{self.name}.rescue.{trial.name}")
@@ -82,7 +89,7 @@ class SetupDefaults:
 
 # Fields whose default is None, so the generic coercion can't infer their type.
 _OPTIONAL_TIMES = {"sweep_from"}
-_OPTIONAL_FLOATS = {"min_objective_points", "ote_entry", "ote_stop"}
+_OPTIONAL_FLOATS = {"min_objective_points", "ote_entry", "ote_stop", "min_rr", "min_leg_points"}
 
 
 def _apply(params: SetupParams, values: dict[str, Any], section: str) -> SetupParams:
@@ -97,7 +104,7 @@ def _apply(params: SetupParams, values: dict[str, Any], section: str) -> SetupPa
 
 def load_setup_defaults(path: Path = DEFAULTS_PATH) -> dict[str, SetupDefaults]:
     """Read and check defaults.toml. Unknown keys, combined or no-op rescue
-    trials and more than 12 trials per setup are all errors."""
+    trials and more than 12 rescue (4 round-2) trials per setup are all errors."""
     with Path(path).open("rb") as fh:
         raw = tomllib.load(fh)
     unknown = set(raw) - {"setups"}
@@ -108,31 +115,41 @@ def load_setup_defaults(path: Path = DEFAULTS_PATH) -> dict[str, SetupDefaults]:
         sec = dict(sec)
         title = sec.pop("title", name)
         trials_raw = sec.pop("rescue", [])
+        round2_raw = sec.pop("round2", [])
         params = _apply(SetupParams(), sec, f"setups.{name}")
         _check_window(params, f"setups.{name}")
         if len(trials_raw) > MAX_RESCUE_TRIALS:
             raise ConfigError(
                 f"setups.{name}: {len(trials_raw)} rescue trials, max {MAX_RESCUE_TRIALS}"
             )
-        trials = []
-        for t in trials_raw:
-            t = dict(t)
-            changes = {k: v for k, v in t.items() if k != "name"}
-            if len(changes) != 1:
-                raise ConfigError(
-                    f"setups.{name} rescue {t.get('name')!r}: change exactly one parameter, "
-                    f"not {sorted(changes)}"
-                )
-            trial = RescueTrial(str(t.get("name", next(iter(changes)))), changes)
-            d = SetupDefaults(name, title, params)
-            _check_window(d.trial_params(trial), f"setups.{name} rescue {trial.name!r}")
-            if d.trial_params(trial) == params:
-                raise ConfigError(f"setups.{name} rescue {trial.name!r} changes nothing")
-            trials.append(trial)
-        if len({t.name for t in trials}) != len(trials):
+        if len(round2_raw) > MAX_ROUND2_TRIALS:
+            raise ConfigError(
+                f"setups.{name}: {len(round2_raw)} round-2 trials, max {MAX_ROUND2_TRIALS}"
+            )
+        d = SetupDefaults(name, title, params)
+        trials = [_trial(d, t) for t in trials_raw]
+        round2 = [_trial(d, t) for t in round2_raw]
+        names = [t.name for t in trials + round2]
+        if len(set(names)) != len(names):
             raise ConfigError(f"setups.{name}: duplicate rescue trial names")
-        out[name] = SetupDefaults(name, title, params, tuple(trials))
+        out[name] = SetupDefaults(name, title, params, tuple(trials), tuple(round2))
     return out
+
+
+def _trial(d: SetupDefaults, t: dict[str, Any]) -> RescueTrial:
+    """One pre-registered trial: exactly one parameter changed, and it must change it."""
+    t = dict(t)
+    changes = {k: v for k, v in t.items() if k != "name"}
+    if len(changes) != 1:
+        raise ConfigError(
+            f"setups.{d.name} rescue {t.get('name')!r}: change exactly one parameter, "
+            f"not {sorted(changes)}"
+        )
+    trial = RescueTrial(str(t.get("name", next(iter(changes)))), changes)
+    _check_window(d.trial_params(trial), f"setups.{d.name} rescue {trial.name!r}")
+    if d.trial_params(trial) == d.params:
+        raise ConfigError(f"setups.{d.name} rescue {trial.name!r} changes nothing")
+    return trial
 
 
 def _check_window(params: SetupParams, where: str) -> None:

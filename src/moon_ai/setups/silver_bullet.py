@@ -23,8 +23,12 @@ day's bars only:
 6. A candidate is emitted on the bar where all of it is first known, at most
    once per setup per trading day. Its entry must fill before the window ends.
 
-Not yet implemented (they raise if a rescue trial asks for them): the bias
-gate and first-tethered FVG selection. The research card's pre-fill cancels
+Round 2 (2026-11-01): `bias_gate` (the previous-day-range bias, as OTE),
+`min_rr` (minimum reward:risk to the target) and `timeframe` (read the patterns
+from whole N-minute bars; entries still fill on 1-minute bars).
+
+Not yet implemented (it raises if a rescue trial asks for it): first-tethered
+FVG selection. The research card's pre-fill cancels
 (price reaching the target first, or a close through the FVG's far side) are
 also not enforced yet; only the entry deadline is.
 """
@@ -34,7 +38,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from datetime import date, datetime, time
 
-from moon_ai.bars import Bar
+from moon_ai.bars import Bar, resample
 from moon_ai.config import Config, Window
 from moon_ai.engine import Context
 from moon_ai.ict.displacement import find_displacements
@@ -75,7 +79,7 @@ FUNNEL = (
 class SilverBullet:
     name = "silver_bullet"
     funnel: dict[date, int] | None = None  # set by `moon-ai funnel`; never changes decisions
-    supports_bias = False  # subclasses that implement `_accept` for the bias gate set this
+    supports_bias = True  # NY AM/PM: previous-day-range bias; London and 2022 have their own
     extra_pools: frozenset[str] = frozenset()
 
     def __init__(self, params: SetupParams, config: Config, symbol: str = "MNQ.v.0"):
@@ -109,6 +113,13 @@ class SilverBullet:
         bars = [b for b in history if trading_day(b.ts_close) == day]
         if not bars or bars[-1].ts_close != now:
             return []
+        if self.params.timeframe > 1:
+            # Read the patterns from whole N-minute bars, only as each one closes.
+            if int(now.timestamp()) % (self.params.timeframe * 60):
+                return []
+            bars = resample(bars, self.params.timeframe)
+            if not bars or bars[-1].ts_close != now:
+                return []
         self._reach("in window")
         self._prepare(bars, day)
         cand = self._find(bars, now, day)
@@ -128,13 +139,23 @@ class SilverBullet:
     def _on_new_day(self, ctx: Context, day: date) -> None:
         """Once per trading day, at its first in-window bar: read longer history
         (e.g. the bias). Fetching days of bars on every bar would be slow."""
+        self._bias = None
+        if self.params.bias_gate:
+            from moon_ai.setups.london import prev_day_range_bias, session_ohlc
+
+            history = ctx.history(self.symbol, 3 * 1440)
+            inst = history[-1].instrument_id if history else None
+            sessions = session_ohlc([b for b in history if b.instrument_id == inst])
+            self._bias = prev_day_range_bias(sessions, day)
 
     def _prepare(self, bars: Sequence[Bar], day: date) -> None:
         """Per-bar context from today's bars (e.g. the midnight open); none by default."""
 
     def _accept(self, mss: MarketStructureShift, bars: Sequence[Bar]) -> bool:
-        """Extra rules a structure shift must pass (bias gate, PO3); all pass by default."""
-        return True
+        """Extra rules a structure shift must pass. The bias gate (the same rule as
+        OTE's): with a bias, only shifts in its direction; with none, either side."""
+        bias = getattr(self, "_bias", None)
+        return not (self.params.bias_gate and bias is not None and bias != mss.direction)
 
     def _extra_levels(self) -> list[Level]:
         return []
@@ -253,6 +274,8 @@ class SilverBullet:
         self._reach("target pool")
         objective = abs(target - entry)
         if p.min_objective_points is not None and objective < p.min_objective_points:
+            return None
+        if p.min_rr is not None and objective < p.min_rr * abs(entry - stop):
             return None
         self._reach("room to target")
         _, window_end = window_bounds(ny_date, self.window)
