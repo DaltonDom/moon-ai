@@ -150,3 +150,26 @@ def test_cli_backtest_prints_a_summary(store, capsys):
         )
         == 2
     )
+
+
+def test_cli_backtest_all_writes_a_summary(store, capsys):
+    code = main(
+        [
+            "backtest",
+            "--all",
+            "--from",
+            "2026-07-13",
+            "--to",
+            "2026-07-25",
+            "--store",
+            str(store / "bars"),
+            "--runs",
+            str(store / "all"),
+            "--no-news",
+            "--no-open",
+        ]
+    )
+    out = capsys.readouterr().out
+    assert code == 0 and "NY AM Silver Bullet: Not enough trades" in out
+    assert (store / "all" / "summary.html").exists()
+    assert main(["backtest", "--from", "2026-07-13", "--to", "2026-07-14", "--no-news"]) == 2
