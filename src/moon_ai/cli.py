@@ -45,6 +45,12 @@ def _parser() -> argparse.ArgumentParser:
         help="after an intentional change: rewrite tests/frozen/expected.json",
     )
 
+    ng = sub.add_parser("nightly", help="the nightly paper replay: install, status, run, uninstall")
+    ng.add_argument("action", choices=["install", "status", "run", "uninstall"])
+    ng.add_argument("--session", type=date.fromisoformat, help="run: re-run one session")
+    ng.add_argument("--scheduled", action="store_true", help=argparse.SUPPRESS)
+    ng.add_argument("--data", type=Path, default=Path("data"), help="data folder")
+
     tr = sub.add_parser("train", help="train the ML filter on the go-forward setups' backtests")
     tr.add_argument("--runs", type=Path, default=Path("data/runs"), help="where backtest runs are")
     tr.add_argument("--store", type=Path, help="local bar store root")
@@ -113,6 +119,8 @@ def main(
     args = _parser().parse_args(argv)
     if args.command == "backtest":
         return _backtest(args)
+    if args.command == "nightly":
+        return _nightly(args)
     if args.command == "train":
         return _train(args)
     if args.command == "review-days":
@@ -152,6 +160,40 @@ def main(
     for path in result.files:
         print(f"wrote {path}")
     return 0
+
+
+def _nightly(args: argparse.Namespace) -> int:
+    from moon_ai.nightly import launchd
+    from moon_ai.nightly.job import NightlyJob, Paths
+    from moon_ai.nightly.status import status_text
+
+    paths = Paths(args.data)
+    if args.action == "install":
+        if sys.platform != "darwin":
+            print(
+                "refused: the nightly agent uses macOS launchd; run this on the Mac",
+                file=sys.stderr,
+            )
+            return 2
+        path = launchd.install()
+        print(f"Installed {path}. It checks every hour and runs once a day after 6:30 pm New York.")
+        print("Doing a first run now on the latest session ...")
+        args.action = "run"
+    if args.action == "uninstall":
+        print(
+            "Removed the nightly agent; your data stays."
+            if launchd.uninstall()
+            else "The nightly agent wasn't installed."
+        )
+        return 0
+    if args.action == "status":
+        print(status_text(paths))
+        return 0
+    results = NightlyJob(paths).run(only_session=args.session, scheduled=args.scheduled)
+    for r in results:
+        mark = {"ok": "✓", "warn": "!", "skipped": "-", "fail": "✕"}[r.status]
+        print(f"{mark} {r.step}: {r.message}")
+    return 1 if any(r.status == "fail" for r in results) else 0
 
 
 def _train(args: argparse.Namespace) -> int:

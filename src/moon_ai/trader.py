@@ -239,7 +239,7 @@ class Trader:
 
     def _fill_id(self, fill: Fill) -> str:
         # RunJournal numbers fills per order from 1; an entry is its order's first fill.
-        return f"{self.journal.run_id}:{fill.order_id}:1"
+        return f"{self.journal.order_key(fill.order_id)}:1"
 
     # --- journal rows --------------------------------------------------------------
 
@@ -264,7 +264,7 @@ class Trader:
                 "candidate_id": plan.cid,
                 "entry_fill_id": plan.entry_fill_id,
                 "exit_fill_id": (
-                    f"{self.journal.run_id}:{exit_fill.order_id}:1" if exit_fill else None
+                    f"{self.journal.order_key(exit_fill.order_id)}:1" if exit_fill else None
                 ),
                 "entry_time": entry.ts,
                 "exit_time": exit_fill.ts if exit_fill else None,
