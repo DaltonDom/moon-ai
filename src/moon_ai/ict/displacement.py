@@ -58,7 +58,8 @@ def find_displacements(
     found: list[Displacement] = []
     for i in range(1, len(bars)):
         b, ref = bars[i], atrs[i - 1]
-        if ref is None or bars[i - 1].instrument_id != b.instrument_id:
+        # A zero ATR (a frozen market) makes any body look huge: not a displacement.
+        if not ref or bars[i - 1].instrument_id != b.instrument_id:
             continue
         body = abs(b.close - b.open)
         if body == 0 or body < k * ref:
