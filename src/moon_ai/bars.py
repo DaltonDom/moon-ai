@@ -43,20 +43,22 @@ class InMemoryBarFeed:
 
     def __init__(self, bars: Iterable[Bar]):
         ordered = sorted(bars, key=lambda b: (b.ts_close, b.symbol))
-        _validate(ordered)
+        validate(ordered)
         self._bars = list(mark_rolls(ordered))
 
     def __iter__(self) -> Iterator[Bar]:
         return iter(self._bars)
 
 
-def mark_rolls(bars: Iterable[Bar]) -> Iterator[Bar]:
+def mark_rolls(bars: Iterable[Bar], last_id: dict[str, int] | None = None) -> Iterator[Bar]:
     """Flag the first bar after each `instrument_id` change, per symbol.
 
     Databento continuous symbols are not back-adjusted, so a contract change
-    is a price discontinuity. Detectors must not span it.
+    is a price discontinuity. Detectors must not span it. Pass the same
+    `last_id` dict across consecutive chunks of one series to catch a roll on
+    a chunk boundary.
     """
-    last_id: dict[str, int] = {}
+    last_id = {} if last_id is None else last_id
     for b in bars:
         prev = last_id.get(b.symbol)
         last_id[b.symbol] = b.instrument_id
@@ -64,7 +66,7 @@ def mark_rolls(bars: Iterable[Bar]) -> Iterator[Bar]:
         yield replace(b, roll=rolled) if rolled != b.roll else b
 
 
-def _validate(bars: list[Bar]) -> None:
+def validate(bars: list[Bar]) -> None:
     seen: set[tuple[str, datetime]] = set()
     for b in bars:
         key = (b.symbol, b.ts_open)
