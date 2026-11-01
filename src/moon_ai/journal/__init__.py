@@ -72,9 +72,18 @@ class RunJournal:
     run id so they stay unique across runs.
     """
 
-    def __init__(self, store: _Writer, run_id: str, tick_size: Callable[[str], float]):
+    def __init__(
+        self,
+        store: _Writer,
+        run_id: str,
+        tick_size: Callable[[str], float],
+        order_prefix: str = "",
+    ):
+        """`order_prefix` keeps broker order ids unique when one run spans several
+        broker instances (the nightly paper run replays each session afresh)."""
         self._store = store
         self.run_id = run_id
+        self.order_prefix = order_prefix
         self._tick = tick_size
         self._order_candidate: dict[str, str | None] = {}
         self._fill_count: dict[str, int] = {}
@@ -89,7 +98,7 @@ class RunJournal:
         submitted_at: datetime,
         candidate_id: str | None = None,
     ) -> str:
-        oid = f"{self.run_id}:{broker_order_id}"
+        oid = self.order_key(broker_order_id)
         self._order_candidate[oid] = candidate_id
         bracket = order.bracket
         self._store.insert(
@@ -110,9 +119,12 @@ class RunJournal:
         )
         return oid
 
+    def order_key(self, broker_order_id: str) -> str:
+        return f"{self.run_id}:{self.order_prefix}{broker_order_id}"
+
     def _candidate_of(self, fill: Any) -> str | None:
         """A bracket exit's order id is `<entry order>-stop|-target` (SimBroker)."""
-        oid = f"{self.run_id}:{fill.order_id}"
+        oid = self.order_key(fill.order_id)
         if oid not in self._order_candidate and fill.reason in ("stop", "target"):
             oid = oid.removesuffix(f"-{fill.reason}")
         return self._order_candidate.get(oid)
@@ -140,7 +152,7 @@ class RunJournal:
     def record(self, entry: JournalEntry) -> None:
         if entry.kind == "fill":
             f = entry.data["fill"]
-            oid = f"{self.run_id}:{f.order_id}"
+            oid = self.order_key(f.order_id)
             n = self._fill_count.get(oid, 0) + 1
             self._fill_count[oid] = n
             self._store.insert(
