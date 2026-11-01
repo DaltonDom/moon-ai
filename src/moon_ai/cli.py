@@ -95,6 +95,11 @@ def _parser() -> argparse.ArgumentParser:
         help="run the full protocol for every setup: defaults, rescue retests, verdicts",
     )
     b.add_argument(
+        "--round2",
+        action="store_true",
+        help="run only the round-2 trials (and retests skipped before), never repeating a run",
+    )
+    b.add_argument(
         "--from",
         dest="start",
         type=date.fromisoformat,
@@ -407,6 +412,8 @@ def _verify(args: argparse.Namespace) -> int:
 def _backtest(args: argparse.Namespace) -> int:
     from moon_ai.backtest.runner import NewsCalendarMissing, run_backtest
 
+    if args.round2:
+        return _backtest_round2(args)
     if args.all:
         return _backtest_all(args)
     if not args.setup:
@@ -503,6 +510,29 @@ def _funnel(args: argparse.Namespace) -> int:
     print("then the trader:")
     for status, n in sorted(result.summary["statuses"].items(), key=lambda kv: -kv[1]):
         print(f"  {status:<24} {n:>5}")
+    return 0
+
+
+def _backtest_round2(args: argparse.Namespace) -> int:
+    from moon_ai.backtest.protocol import judge_round2
+    from moon_ai.backtest.runner import NewsCalendarMissing
+
+    try:
+        ran = judge_round2(
+            args.start,
+            args.end,
+            args.runs,
+            store_root=args.store,
+            config=load_config(args.config),
+            news=not args.no_news,
+            say=lambda line: print(line, flush=True),
+        )
+    except NewsCalendarMissing as exc:
+        print(f"refused: {exc}", file=sys.stderr)
+        return 2
+    print()
+    passed = [f"{s} ({t})" for s, t, ok in ran if ok]
+    print(f"{len(ran)} round-2 trial(s) run; passed: {', '.join(passed) or 'none'}")
     return 0
 
 

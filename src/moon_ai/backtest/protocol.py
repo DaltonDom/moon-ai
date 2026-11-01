@@ -33,6 +33,7 @@ from moon_ai.backtest.report import CSS, render
 from moon_ai.backtest.runner import BacktestResult, run_backtest
 from moon_ai.backtest.stats import Metrics
 from moon_ai.config import load_config
+from moon_ai.journal import decode_json, read_run
 from moon_ai.setups import REGISTRY, load_setup_defaults
 from moon_ai.setups.base import RescueTrial
 
@@ -191,6 +192,66 @@ def judge_all(
     )
     write_summary(verdicts, start, end, runs_root / "summary.html")
     return verdicts
+
+
+def _already_ran(runs_root: Path, setup: str, trial: str, start: date, end: date) -> bool:
+    """A non-stress run of this exact trial and window is already logged."""
+    for f in runs_root.glob(f"{setup}.{trial}.{start}_{end}.*"):
+        if not (f / "run.json").exists():
+            continue
+        notes = decode_json(read_run(f, "runs"), "runs")[0]["notes"] or {}
+        if not notes.get("stress"):
+            return True
+    return False
+
+
+def judge_round2(
+    start: date,
+    end: date,
+    runs_root: Path,
+    *,
+    hooks: Hooks | None = None,
+    setups: list[str] | None = None,
+    say: Callable[[str], None] = _quiet,
+    **kw: Any,
+) -> list[tuple[str, str, bool]]:
+    """Run each setup's round-2 trials, plus any pre-registered retest that was
+    skipped earlier because it wasn't built, never repeating a logged run.
+    A trial that passes makes its setup go forward in verdicts.json.
+    Returns (setup, trial, passed) for every trial run."""
+    hooks = hooks or Hooks()
+    defaults = load_setup_defaults()
+    names = setups or sorted(defaults, key=lambda n: defaults[n].params.priority)
+    kw = {**kw, "runs_root": runs_root}
+    verdicts_path = runs_root / "verdicts.json"
+    saved = json.loads(verdicts_path.read_text()) if verdicts_path.exists() else None
+    out: list[tuple[str, str, bool]] = []
+    for i, n in enumerate(names, 1):
+        d = defaults[n]
+        todo = [
+            t for t in (*d.rescue, *d.round2) if not _already_ran(runs_root, n, t.name, start, end)
+        ]
+        todo = [t for t in todo if not _unbuilt(n, t, kw)]
+        say(f"[{i}/{len(names)}] {d.title}: {len(todo)} trial(s) to run")
+        for t in todo:
+            _, page, passed, checks = _try(n, t.name, start, end, kw, hooks, say)
+            out.append((n, t.name, passed))
+            if saved is not None:
+                for v in saved["setups"]:
+                    if v["setup"] != n:
+                        continue
+                    v.setdefault("trials_run", []).append(t.name)
+                    if passed and v["verdict"] != "go-forward":
+                        v.update(verdict="go-forward", trial=t.name, reasons=[], report=str(page))
+                        v["checks"] = checks
+            if passed:
+                break
+    if saved is not None:
+        verdicts_path.write_text(json.dumps(saved, indent=2) + "\n")
+        write_summary(
+            [SetupVerdict(**v) for v in saved["setups"]], start, end, runs_root / "summary.html"
+        )
+    return out
 
 
 WORDS = {

@@ -115,7 +115,7 @@ class OtePullback:
             origin = min(b.low for b in seg) if long else max(b.high for b in seg)
             hi, lo = (end.price, origin) if long else (origin, end.price)
             rng = hi - lo
-            if rng <= 0:
+            if rng <= 0 or (p.min_leg_points is not None and rng < p.min_leg_points):
                 continue
             sign = 1 if long else -1
             far = hi if long else lo  # the leg's end (0%)

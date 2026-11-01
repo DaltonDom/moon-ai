@@ -7,7 +7,9 @@
 # Every run, defaults included, is logged as a trial for the DSR and PBO.
 #
 # Don't edit a setup here after its first backtest. A change is a new
-# pre-registration, and the trials it adds are counted.
+# pre-registration, and the trials it adds are counted. The `round2` lists were
+# added this way on 2026-11-01, after every setup failed its first test; they
+# run with `moon-ai backtest --round2` and count as trials like any other.
 #
 # Sources: ict-setup-definitions.md §2 and §4 (branch research/ict-setup-definitions),
 # ICT timestamps (#21, docs/research/ict-setup-timestamps.md), setup rules (#16),
@@ -59,6 +61,14 @@ min_objective_points = 10.0
   name = "news_blocks_setup"
   news_handling = "blocks_setup"
 
+  # Round 2, registered 2026-11-01 after the first results (docs/research/why-losing.md).
+  [[setups.ny_am_silver_bullet.round2]]
+  name = "min_rr_2"
+  min_rr = 2.0
+  [[setups.ny_am_silver_bullet.round2]]
+  name = "timeframe_5m"
+  timeframe = 5
+
 [setups.ny_pm_silver_bullet]
 title = "NY PM Silver Bullet"
 priority = 2
@@ -98,6 +108,14 @@ min_objective_points = 10.0
   [[setups.ny_pm_silver_bullet.rescue]]
   name = "news_blocks_setup"
   news_handling = "blocks_setup"
+
+  # Round 2, registered 2026-11-01 after the first results (docs/research/why-losing.md).
+  [[setups.ny_pm_silver_bullet.round2]]
+  name = "min_rr_2"
+  min_rr = 2.0
+  [[setups.ny_pm_silver_bullet.round2]]
+  name = "timeframe_5m"
+  timeframe = 5
 
 [setups.london_sweep_and_reverse]
 title = "London sweep-and-reverse"
@@ -183,6 +201,11 @@ ote_stop = 1.0
   name = "swing_n_2"
   swing_n = 2
 
+  # Round 2, registered 2026-11-01 after the first results (docs/research/why-losing.md).
+  [[setups.ote_pullback.round2]]
+  name = "min_leg_30"
+  min_leg_points = 30.0
+
 [setups.ict_2022_model]
 title = "ICT 2022 model"
 priority = 5
@@ -225,3 +248,11 @@ news_day_filter = true
   [[setups.ict_2022_model.rescue]]
   name = "mss_on_wick"
   mss_break = "wick"
+
+  # Round 2, registered 2026-11-01 after the first results (docs/research/why-losing.md).
+  [[setups.ict_2022_model.round2]]
+  name = "min_rr_2"
+  min_rr = 2.0
+  [[setups.ict_2022_model.round2]]
+  name = "timeframe_5m"
+  timeframe = 5

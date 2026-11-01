@@ -59,3 +59,11 @@ def test_no_look_ahead(seed):
     for c in full:
         cut = [b for b in bars if b.ts_close <= c.decision_time]
         assert scan_all(cut, OTE, cls=OtePullback)[-1] == c
+
+
+def test_round2_minimum_leg_size():
+    # The textbook leg is 98 -> 106, 8 points.
+    assert scan_all(day(LEG, end=(9, 30)), replace(OTE, min_leg_points=9.0), cls=OtePullback) == []
+    assert (
+        len(scan_all(day(LEG, end=(9, 30)), replace(OTE, min_leg_points=8.0), cls=OtePullback)) == 1
+    )

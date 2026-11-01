@@ -95,8 +95,6 @@ def test_ce_entry_and_one_candidate_per_day():
 
 def test_unbuilt_rescue_variants_fail_loudly():
     with pytest.raises(NotImplementedError):
-        NyAmSilverBullet(replace(AM, bias_gate=True), CFG)
-    with pytest.raises(NotImplementedError):
         NyAmSilverBullet(replace(AM, fvg_selection="first_tethered"), CFG)
     assert REGISTRY["ny_am_silver_bullet"] is NyAmSilverBullet
 
@@ -123,3 +121,43 @@ def test_no_look_ahead(seed):
     for c in full:
         cut = [b for b in bars if b.ts_close <= c.decision_time]
         assert scan_all(cut, loose)[-1] == c
+
+
+def test_round2_minimum_reward_to_risk():
+    # The textbook plan risks 3.25 (99.5 -> 96.25) for 12.5 to the target: 3.85:1.
+    assert scan_all(day(SETUP_BARS), replace(AM, min_rr=4.0)) == []
+    assert len(scan_all(day(SETUP_BARS), replace(AM, min_rr=3.5))) == 1
+
+
+def test_round2_bias_gate_keeps_only_shifts_with_the_bias():
+    from types import SimpleNamespace as NS
+
+    sb = NyAmSilverBullet(replace(AM, bias_gate=True), CFG)
+    sb._bias = "bear"
+    assert not sb._accept(NS(direction="bull"), [])
+    assert sb._accept(NS(direction="bear"), [])
+    sb._bias = None  # no bias (an inside close): either side
+    assert sb._accept(NS(direction="bull"), [])
+    # With no earlier sessions there's no bias, so the textbook day still trades.
+    assert len(scan_all(day(SETUP_BARS), replace(AM, bias_gate=True))) == 1
+
+
+@pytest.mark.parametrize("seed", range(4))
+def test_round2_five_minute_patterns_are_decided_only_as_each_5m_bar_closes(seed):
+    five = replace(AM, timeframe=5, min_objective_points=0.0)
+    bars = random_day(seed)
+    for c in scan_all(bars, five):
+        assert c.decision_time.minute % 5 == 0
+        cut = [b for b in bars if b.ts_close <= c.decision_time]
+        assert scan_all(cut, five)[-1] == c  # still no look-ahead
+
+
+def test_resample_builds_only_whole_clock_aligned_bars():
+    from moon_ai.bars import resample
+
+    bars = day({}, end=(10, 7))[-12:]  # 09:55 .. 10:06 New York, 1-minute
+    five = resample(bars, 5)
+    assert [b.ts_open.astimezone(NY).strftime("%H:%M") for b in five] == ["09:55", "10:00"]
+    first = bars[:5]
+    assert five[0].high == max(b.high for b in first) and five[0].close == first[-1].close
+    assert five[0].ts_close == first[-1].ts_close

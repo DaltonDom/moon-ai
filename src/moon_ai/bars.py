@@ -8,9 +8,9 @@ engine in `ts_close` order. Nothing downstream may see a bar before its close.
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterable, Iterator, Sequence
 from dataclasses import dataclass, replace
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Protocol
 
 
@@ -77,3 +77,38 @@ def validate(bars: list[Bar]) -> None:
             raise ValueError(f"bar {b.symbol} at {b.ts_open.isoformat()}: high/low don't bound it")
         if b.ts_close <= b.ts_open:
             raise ValueError(f"bar {b.symbol} at {b.ts_open.isoformat()}: close before open")
+
+
+def resample(bars: Sequence[Bar], minutes: int) -> list[Bar]:
+    """Whole `minutes`-minute bars (aligned to the clock, UTC) from 1-minute bars.
+
+    Only complete buckets are returned: a bucket whose last minute hasn't closed
+    yet, or that spans a contract change, is left out, so nothing is known early.
+    """
+    if minutes <= 1:
+        return list(bars)
+    step = minutes * 60
+    groups: dict[tuple[int, int], list[Bar]] = {}
+    for b in bars:
+        start = int(b.ts_open.timestamp()) // step * step
+        groups.setdefault((start, b.instrument_id), []).append(b)
+    out = []
+    for (start, _), g in sorted(groups.items()):
+        end = start + step
+        if int(g[-1].ts_close.timestamp()) != end or len({x.instrument_id for x in g}) != 1:
+            continue
+        out.append(
+            Bar(
+                symbol=g[0].symbol,
+                ts_open=datetime.fromtimestamp(start, UTC),
+                ts_close=g[-1].ts_close,
+                open=g[0].open,
+                high=max(x.high for x in g),
+                low=min(x.low for x in g),
+                close=g[-1].close,
+                volume=sum(x.volume for x in g),
+                instrument_id=g[0].instrument_id,
+                roll=g[0].roll,
+            )
+        )
+    return out

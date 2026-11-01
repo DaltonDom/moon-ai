@@ -92,9 +92,45 @@ def test_retests_whose_rule_is_not_built_are_skipped_not_crashed():
     hooks, ran = fake_hooks({"default": "fail"})
     lines: list[str] = []
     v = judge("ny_am_silver_bullet", START, END, hooks=hooks, say=lines.append)
-    unbuilt = {"first_tethered_fvg", "trade_with_bias_only"}
+    unbuilt = {"first_tethered_fvg"}  # the bias gate is built now (round 2)
     assert v.verdict == "retired"
     assert ran == ["default", *(t for t in trials if t not in unbuilt)]
-    assert f"none of its {len(trials) - 2} pre-registered retests" in v.reasons[-2]
-    assert "first_tethered_fvg" in v.reasons[-1] and "trade_with_bias_only" in v.reasons[-1]
+    assert f"none of its {len(trials) - 1} pre-registered retests" in v.reasons[-2]
+    assert "first_tethered_fvg" in v.reasons[-1]
     assert any("first_tethered_fvg: skipped, not built yet" in ln for ln in lines)
+
+
+def test_round2_runs_only_new_and_skipped_trials_and_never_repeats(tmp_path):
+    from moon_ai.backtest.protocol import judge_round2
+
+    d = load_setup_defaults()["ny_am_silver_bullet"]
+    # The first pass logged every built retest; fake those folders.
+    for t in ["default", *(t.name for t in d.rescue if t.name != "first_tethered_fvg")]:
+        if t == "trade_with_bias_only":
+            continue  # skipped as unbuilt in the first pass
+        _fake_run(tmp_path, "ny_am_silver_bullet", t)
+    hooks, ran = fake_hooks({"timeframe_5m": "go-forward"})
+    lines: list[str] = []
+    out = judge_round2(
+        START, END, tmp_path, hooks=hooks, setups=["ny_am_silver_bullet"], say=lines.append
+    )
+    assert ran == ["trade_with_bias_only", "min_rr_2", "timeframe_5m"]
+    assert out[-1] == ("ny_am_silver_bullet", "timeframe_5m", True)
+    assert "3 trial(s) to run" in lines[0]
+
+
+def _fake_run(root, setup, trial):
+    from datetime import UTC, datetime
+
+    from moon_ai.journal.stores import ParquetRun
+
+    run_id = f"{setup}.{trial}.{START}_{END}.x"
+    ParquetRun(
+        root,
+        {
+            "run_id": run_id,
+            "kind": "backtest",
+            "created_at": datetime(2026, 11, 1, tzinfo=UTC),
+            "notes": {"setup": setup, "trial": trial},
+        },
+    ).write()
