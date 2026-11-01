@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import html
 import json
+import time
 from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
 from datetime import date
@@ -70,11 +71,23 @@ def _checks(ev: Evaluation, stress: Metrics | None) -> dict[str, Any]:
     }
 
 
+def _quiet(_: str) -> None:
+    pass
+
+
 def _try(
-    setup: str, trial: str | None, start: date, end: date, kw: dict[str, Any], hooks: Hooks
+    setup: str,
+    trial: str | None,
+    start: date,
+    end: date,
+    kw: dict[str, Any],
+    hooks: Hooks,
+    say: Callable[[str], None] = _quiet,
 ) -> tuple[Evaluation, Path, bool, dict[str, Any]]:
     """Run, evaluate, stress if it passes, write the report card. Returns
     (evaluation, report path, passed everything, the four checks)."""
+    began = time.monotonic()
+    say(f"  testing {trial or 'default'} version...")
     result = hooks.run(setup, start, end, trial=trial, **kw)
     ev = hooks.evaluate(result.folder, store_root=kw.get("store_root"), config=kw.get("config"))
     stress = None
@@ -82,15 +95,26 @@ def _try(
         stress = hooks.stress(setup, trial, start, end, **kw)
     page = hooks.render(ev, result.folder, stress)
     passed = ev.verdict == "go-forward" and stress is not None and stress.net_r > 0
+    minutes = (time.monotonic() - began) / 60
+    say(
+        f"  {trial or 'default'}: {ev.metrics.trades} trades, "
+        f"{'passed' if passed else 'did not pass'} ({minutes:.0f} min)"
+    )
     return ev, page, passed, _checks(ev, stress)
 
 
 def judge(
-    setup: str, start: date, end: date, *, hooks: Hooks | None = None, **kw: Any
+    setup: str,
+    start: date,
+    end: date,
+    *,
+    hooks: Hooks | None = None,
+    say: Callable[[str], None] = _quiet,
+    **kw: Any,
 ) -> SetupVerdict:
     hooks = hooks or Hooks()
     defaults = load_setup_defaults()[setup]
-    ev, page, passed, checks = _try(setup, None, start, end, kw, hooks)
+    ev, page, passed, checks = _try(setup, None, start, end, kw, hooks, say)
     tried = ["default"]
     if passed:
         return SetupVerdict(
@@ -103,7 +127,7 @@ def judge(
     reasons = list(ev.reasons) or ["lost money when costs were doubled"]
     last_page = page
     for trial in defaults.rescue:
-        _, t_page, t_passed, t_checks = _try(setup, trial.name, start, end, kw, hooks)
+        _, t_page, t_passed, t_checks = _try(setup, trial.name, start, end, kw, hooks, say)
         tried.append(trial.name)
         last_page = t_page
         if t_passed:
@@ -123,12 +147,15 @@ def judge_all(
     *,
     hooks: Hooks | None = None,
     setups: list[str] | None = None,
+    say: Callable[[str], None] = _quiet,
     **kw: Any,
 ) -> list[SetupVerdict]:
-    names = setups or sorted(
-        load_setup_defaults(), key=lambda n: load_setup_defaults()[n].params.priority
-    )
-    verdicts = [judge(n, start, end, hooks=hooks, runs_root=runs_root, **kw) for n in names]
+    defaults = load_setup_defaults()
+    names = setups or sorted(defaults, key=lambda n: defaults[n].params.priority)
+    verdicts = []
+    for i, n in enumerate(names, 1):
+        say(f"[{i}/{len(names)}] {defaults[n].title}")
+        verdicts.append(judge(n, start, end, hooks=hooks, say=say, runs_root=runs_root, **kw))
     runs_root.mkdir(parents=True, exist_ok=True)
     (runs_root / "verdicts.json").write_text(
         json.dumps(
