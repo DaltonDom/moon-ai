@@ -149,8 +149,10 @@ def splits(df: pl.DataFrame) -> list[str]:
         if s.n_unique() < 5:
             add(c.removeprefix("f_"), pl.col(c))
             continue
-        edges = [float(s.quantile(q)) for q in (0.2, 0.4, 0.6, 0.8)]
-        labels = ["1 lowest", "2", "3", "4", "5 highest"]
+        # Lumpy features (counts, flags) repeat quantiles: keep each edge once.
+        edges = sorted({float(s.quantile(q)) for q in (0.2, 0.4, 0.6, 0.8)})
+        labels = [f"{i + 1}" for i in range(len(edges) + 1)]
+        labels[0], labels[-1] = f"{labels[0]} lowest", f"{labels[-1]} highest"
         add(c.removeprefix("f_") + " (fifths)", pl.col(c).cut(edges, labels=labels))
     out = []
     for gap, name, rows in sorted(results, reverse=True)[:TOP_SPLITS]:
