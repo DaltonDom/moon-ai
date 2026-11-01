@@ -198,7 +198,7 @@ Decided in [Journal storage and data model](https://github.com/DaltonDom/moon-ai
   | Table | One row per | Key fields |
   |---|---|---|
   | `runs` | backtest, baseline or paper/shadow stream | run id, kind (`backtest`, `baseline_random`, `baseline_rules`, `paper`, `shadow`, later `live`), code commit, `config/defaults.toml` hash, model id, data range, account size and risk per trade |
-  | `candidates` | candidate | id, run, setup, side, decision time, planned entry/stop/target, time-out, rule results, feature vector, feature-set version, ML probability and threshold, **status** (`taken`, `skipped:ml`, `skipped:cap`, `skipped:blackout`, `skipped:london_min_stop`, `skipped:daily_stop`, `unfilled`), label, other matching setups (tags) |
+  | `candidates` | candidate | id, run, setup, side, decision time, planned entry/stop/target, time-out, rule results, feature vector, feature-set version, ML probability and threshold, **status** (`taken`, `skipped:ml`, `skipped:cap`, `skipped:blackout`, `skipped:london_min_stop`, `skipped:daily_stop`, `skipped:session` (holiday, early close, roll or degraded day), `unfilled`), label, other matching setups (tags) |
   | `orders` / `fills` | order / fill | candidate, type, prices, quantity, times, slippage in ticks, commission |
   | `trades` | taken candidate | entry and exit fills, exit reason, MAE/MFE, R, net $, chart path |
   | `reviews` | taken trade | status (`pending`, `done`, `failed`), attempts, bucket, the validated review fields, model used, cost |
@@ -209,7 +209,7 @@ Decided in [Journal storage and data model](https://github.com/DaltonDom/moon-ai
   - **Kinds are never mixed.** Every row carries its run, and the Today page reads only the `paper` run. Backtest numbers can't leak into the go-live bar.
   - **Append-only, with two exceptions:** a trade's exit fields are filled when it closes, and a review's fields arrive later. Nothing else is edited; a correction is a new run.
   - **Money:** prices are stored in points, with R and net $ (after commission and slippage) computed once at close.
-- **Feature vectors** are a JSON column in SQLite and a struct column in Parquet, tagged with a feature-set version. Training expands them into columns, and a feature-set change is a new version, never an edit.
+- **Feature vectors** (and other nested fields: rule results, tags, review fields) are canonical JSON text in both stores, so a round-trip is exact, tagged with a feature-set version. Training expands them into columns, and a feature-set change is a new version, never an edit.
 - **Charts:** one PNG per taken trade at `data/charts/<candidate id>.png`, rendered at close for the Claude review and the dashboard. Skipped candidates get no chart.
 - **Schema versions:** a `schema_version` table and numbered migrations in code. Each Parquet run records the schema version it was written with.
 - **Backups:** the nightly job copies `journal.sqlite` to `data/backups/` and keeps the last 14. Time Machine covers the rest.
