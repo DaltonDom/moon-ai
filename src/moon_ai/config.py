@@ -185,10 +185,23 @@ class DataConfig:
 
 
 @dataclass(frozen=True)
+class RiskConfig:
+    """Hard risk rules the ML can't override (docs/design.md, "Hard risk rules")."""
+
+    account_usd: float = 50_000.0
+    risk_per_trade_pct: float = 1.0
+    max_trades_per_session: int = 2
+    daily_stop_pct: float = 2.0  # of the session's starting equity
+    kill_switch_drawdown_pct: float = 10.0  # from the equity peak; stops new trades for good
+    flat_by: time = time(16)  # New York; positions are closed at market before this
+
+
+@dataclass(frozen=True)
 class Config:
     sessions: SessionConfig = field(default_factory=SessionConfig)
     ict: IctConfig = field(default_factory=IctConfig)
     broker: BrokerConfig = field(default_factory=BrokerConfig)
+    risk: RiskConfig = field(default_factory=RiskConfig)
     instruments: dict[str, InstrumentSpec] = field(default_factory=_default_instruments)
     data: DataConfig = field(default_factory=DataConfig)
 
@@ -212,7 +225,7 @@ def load_config(path: Path | None = None) -> Config:
 
 
 def _apply(cfg: Config, raw: dict[str, Any]) -> Config:
-    unknown = set(raw) - {"sessions", "ict", "broker", "instruments", "data"}
+    unknown = set(raw) - {"sessions", "ict", "broker", "risk", "instruments", "data"}
     if unknown:
         raise ConfigError(f"unknown config sections: {sorted(unknown)}")
 
@@ -234,6 +247,7 @@ def _apply(cfg: Config, raw: dict[str, Any]) -> Config:
         ict=_override(cfg.ict, raw.get("ict", {}), "ict"),
         broker=_override(cfg.broker, raw.get("broker", {}), "broker"),
         data=_override(cfg.data, raw.get("data", {}), "data"),
+        risk=_override(cfg.risk, raw.get("risk", {}), "risk"),
         instruments=instruments,
     )
 

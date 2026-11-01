@@ -117,6 +117,10 @@ class RunJournal:
             oid = oid.removesuffix(f"-{fill.reason}")
         return self._order_candidate.get(oid)
 
+    def add_trade(self, row: dict[str, Any]) -> None:
+        """A finished (or still-open at run end) trade; written once, complete."""
+        self._store.insert("trades", {**row, "run_id": self.run_id})
+
     def add_event(
         self, ts: datetime, step: str, status: str, message: str = "", data: Any = None
     ) -> None:

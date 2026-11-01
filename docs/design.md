@@ -198,7 +198,7 @@ Decided in [Journal storage and data model](https://github.com/DaltonDom/moon-ai
   | Table | One row per | Key fields |
   |---|---|---|
   | `runs` | backtest, baseline or paper/shadow stream | run id, kind (`backtest`, `baseline_random`, `baseline_rules`, `paper`, `shadow`, later `live`), code commit, `config/defaults.toml` hash, model id, data range, account size and risk per trade |
-  | `candidates` | candidate | id, run, setup, side, decision time, planned entry/stop/target, time-out, rule results, feature vector, feature-set version, ML probability and threshold, **status** (`taken`, `skipped:ml`, `skipped:cap`, `skipped:blackout`, `skipped:london_min_stop`, `skipped:daily_stop`, `skipped:session` (holiday, early close, roll or degraded day), `unfilled`), label, other matching setups (tags) |
+  | `candidates` | candidate | id, run, setup, side, decision time, planned entry/stop/target, time-out, rule results, feature vector, feature-set version, ML probability and threshold, **status** (`taken`, `skipped:ml`, `skipped:cap`, `skipped:blackout`, `skipped:london_min_stop`, `skipped:daily_stop`, `skipped:session` (holiday, early close, roll or degraded day), `skipped:busy` (a trade on that symbol is already open or working), `skipped:kill_switch`, `skipped:size` (the stop is too wide for 1 contract at 1% risk), `unfilled`), label, other matching setups (tags) |
   | `orders` / `fills` | order / fill | candidate, type, prices, quantity, times, slippage in ticks, commission |
   | `trades` | taken candidate | entry and exit fills, exit reason, MAE/MFE, R, net $, chart path |
   | `reviews` | taken trade | status (`pending`, `done`, `failed`), attempts, bucket, the validated review fields, model used, cost |
