@@ -45,6 +45,12 @@ def _parser() -> argparse.ArgumentParser:
         help="after an intentional change: rewrite tests/frozen/expected.json",
     )
 
+    tr = sub.add_parser("train", help="train the ML filter on the go-forward setups' backtests")
+    tr.add_argument("--runs", type=Path, default=Path("data/runs"), help="where backtest runs are")
+    tr.add_argument("--store", type=Path, help="local bar store root")
+    tr.add_argument("--models", type=Path, default=Path("data/models"))
+    tr.add_argument("--journal", type=Path, default=Path("data/journal/journal.sqlite"))
+
     rv = sub.add_parser("review-days", help="mark sampled days so the bot matches your ICT reading")
     rv.add_argument("setup", nargs="?", help="e.g. ny_am_silver_bullet")
     rv.add_argument("--days", type=int, default=50, help="how many days to sample (default 50)")
@@ -107,6 +113,8 @@ def main(
     args = _parser().parse_args(argv)
     if args.command == "backtest":
         return _backtest(args)
+    if args.command == "train":
+        return _train(args)
     if args.command == "review-days":
         return _review_days(args)
     if args.command == "verify":
@@ -143,6 +151,58 @@ def main(
         print("dry run: nothing downloaded")
     for path in result.files:
         print(f"wrote {path}")
+    return 0
+
+
+def _train(args: argparse.Namespace) -> int:
+    import json
+
+    import polars as pl
+
+    from moon_ai.journal import SQLiteStore
+    from moon_ai.ml.dataset import build_dataset
+    from moon_ai.ml.train import register, save_model, train
+
+    verdicts = args.runs / "verdicts.json"
+    if not verdicts.exists():
+        print(
+            "refused: run `moon-ai backtest --all` first; the filter trains only on setups "
+            "that passed",
+            file=sys.stderr,
+        )
+        return 2
+    passed = [v for v in json.loads(verdicts.read_text())["setups"] if v["verdict"] == "go-forward"]
+    if not passed:
+        print(
+            "No setup passed its backtest, so there's nothing to train on. The ML filter "
+            "stays off and nothing trades."
+        )
+        return 0
+    frames = [build_dataset(Path(v["report"]).parent, store_root=args.store) for v in passed]
+    df = pl.concat([f for f in frames if f.height], how="diagonal_relaxed")
+    report, model = train(df)
+    if model is None:
+        print("The ML filter stays off (setups trade rules-only):")
+        for r in report.reasons:
+            print(f"  - {r}")
+        return 0
+    print(f"Trained on {report.rows} candidates ({report.oof_rows} judged out of sample).")
+    print(f"Taking every setup: {report.rules_only_mean_r:+.3f}R per trade.")
+    print(
+        f"With the filter: {report.ml_mean_r:+.3f}R per trade on {report.ml_taken} trades."
+        if report.ml_mean_r is not None
+        else "With the filter: it would take nothing."
+    )
+    print(
+        "The filter beats rules-only."
+        if report.ml_beats_rules_only
+        else "The filter does NOT beat rules-only, so it stays off."
+    )
+    window = (df["decision_time"].min(), df["decision_time"].max())
+    mid = save_model(model, report, args.models, window, [v["report"] for v in passed])
+    meta = json.loads((args.models / mid / "meta.json").read_text())
+    register(SQLiteStore(args.journal), mid, meta)
+    print(f"Saved model {mid} as a challenger; promotion decides if it ever trades.")
     return 0
 
 
