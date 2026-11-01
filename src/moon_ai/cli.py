@@ -36,6 +36,15 @@ def _parser() -> argparse.ArgumentParser:
     d.add_argument("--dry-run", action="store_true", help="only price the request")
     d.add_argument("--confirm", action="store_true", help="allow a download above the cap")
 
+    v = sub.add_parser("verify", help="run the tests and the frozen replay on your own data")
+    v.add_argument("--config", type=Path, help="TOML config overriding the defaults")
+    v.add_argument("--store", type=Path, help="local bar store root")
+    v.add_argument(
+        "--update-frozen",
+        action="store_true",
+        help="after an intentional change: rewrite tests/frozen/expected.json",
+    )
+
     doc = sub.add_parser("doctor", help="check the setup and say what to fix")
     doc.add_argument("--config", type=Path, help="TOML config overriding the defaults")
 
@@ -77,6 +86,8 @@ def main(
     args = _parser().parse_args(argv)
     if args.command == "backtest":
         return _backtest(args)
+    if args.command == "verify":
+        return _verify(args)
     if args.command == "doctor":
         from moon_ai.doctor import report, run_checks
 
@@ -110,6 +121,44 @@ def main(
     for path in result.files:
         print(f"wrote {path}")
     return 0
+
+
+def _verify(args: argparse.Namespace) -> int:
+    import subprocess
+
+    from moon_ai.backtest.frozen import (
+        END,
+        FIXTURE_STORE,
+        REPO,
+        START,
+        diff,
+        load_expected,
+        replay,
+        write_expected,
+    )
+    from moon_ai.data.store import BarStore
+
+    if args.update_frozen:
+        write_expected(replay(FIXTURE_STORE))
+        print("rewrote tests/frozen/expected.json; commit it with the change that moved it")
+        return 0
+    print("Running the tests ...")
+    tests = subprocess.run([sys.executable, "-m", "pytest", "-q"], cwd=REPO)
+    ok = tests.returncode == 0
+    print("✓ tests pass" if ok else "✕ some tests fail (see above)")
+    store = BarStore(args.store or load_config(args.config).data.store_root)
+    if all(store.covers("MNQ.v.0", d) for d in (START, END)):
+        problems = diff(load_expected(), replay(store.root))
+        if problems:
+            ok = False
+            print("✕ the frozen replay on your own data differs from the committed one:")
+            for line in problems[:20]:
+                print(f"    {line}")
+        else:
+            print("✓ the frozen replay on your own data matches exactly")
+    else:
+        print(f"! your data doesn't cover {START} to {END}, so only the bundled replay ran")
+    return 0 if ok else 1
 
 
 def _backtest(args: argparse.Namespace) -> int:
