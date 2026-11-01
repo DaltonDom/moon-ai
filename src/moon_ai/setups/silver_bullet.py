@@ -49,6 +49,7 @@ FEATURE_SET = "sb-v0"
 # Named pools: New York windows whose completed high and low are liquidity.
 POOL_WINDOWS: dict[str, Window] = {
     "asia": Window(time(20), time(0)),
+    "london": Window(time(2), time(5)),
     "overnight": Window(time(18), time(9, 30)),
     "opening_range": Window(time(9, 30), time(10)),
     "am_session": Window(time(9, 30), time(12)),
@@ -86,11 +87,14 @@ class SilverBullet:
         day = trading_day(now)
         if day in self._done_days:
             return []
-        history = ctx.history(self.symbol, self.history_bars)
+        if getattr(self, "_seen_day", None) != day:
+            self._seen_day = day
+            self._on_new_day(ctx, day)
+        history = ctx.history(self.symbol, HISTORY_BARS)
         bars = [b for b in history if trading_day(b.ts_close) == day]
         if not bars or bars[-1].ts_close != now:
             return []
-        self._prepare(history, bars, day)
+        self._prepare(bars, day)
         cand = self._find(bars, now, day)
         if cand is not None:
             self._done_days.add(day)
@@ -99,10 +103,12 @@ class SilverBullet:
 
     # --- hooks for variants (London) ------------------------------------------------
 
-    history_bars = HISTORY_BARS
+    def _on_new_day(self, ctx: Context, day: date) -> None:
+        """Once per trading day, at its first in-window bar: read longer history
+        (e.g. the bias). Fetching days of bars on every bar would be slow."""
 
-    def _prepare(self, history: Sequence[Bar], bars: Sequence[Bar], day: date) -> None:
-        """Per-bar context from longer history (bias, reference opens); none by default."""
+    def _prepare(self, bars: Sequence[Bar], day: date) -> None:
+        """Per-bar context from today's bars (e.g. the midnight open); none by default."""
 
     def _accept(self, mss: MarketStructureShift, bars: Sequence[Bar]) -> bool:
         """Extra rules a structure shift must pass (bias gate, PO3); all pass by default."""
@@ -110,6 +116,10 @@ class SilverBullet:
 
     def _extra_levels(self) -> list[Level]:
         return []
+
+    def _accept_gap(self, gap: FairValueGap, sweep: Sweep, bars: Sequence[Bar]) -> bool:
+        """Extra rules for the entry FVG (e.g. in the discount half); all pass by default."""
+        return True
 
     # --- the model -----------------------------------------------------------------
 
@@ -160,8 +170,22 @@ class SilverBullet:
             if name == "session_swing":
                 levels += [lv for lv in swing_levels(swings) if lv.known_at >= sweep_from]
             elif name in POOL_WINDOWS:
-                levels += window_levels(bars, POOL_WINDOWS[name], name)
+                levels += self._window_pool(bars, name)
         return levels + self._extra_levels()
+
+    def _window_pool(self, bars: Sequence[Bar], name: str) -> list[Level]:
+        """A window's high and low. They never change once the window has closed,
+        so they're cached per trading day; until then it's recomputed each bar."""
+        key = (trading_day(bars[-1].ts_close), name)
+        cache = self.__dict__.setdefault("_pool_cache", {})
+        if key not in cache:
+            levels = window_levels(bars, POOL_WINDOWS[name], name)
+            if not levels:
+                return []
+            if len(cache) > 16:  # only today's pools are ever needed
+                cache.clear()
+            cache[key] = levels
+        return cache[key]
 
     def _plan(
         self,
@@ -180,7 +204,7 @@ class SilverBullet:
             (g for g in fvgs if g.direction == mss.direction and g.index > sweep.index),
             None,
         )
-        if gap is None:
+        if gap is None or not self._accept_gap(gap, sweep, bars):
             return None
         known = max(mss.known_at, gap.known_at)
         if known != now:  # emit exactly on the bar it all became known

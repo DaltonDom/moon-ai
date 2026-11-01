@@ -25,6 +25,7 @@ from datetime import UTC, date, datetime, time
 from typing import Literal
 
 from moon_ai.bars import Bar
+from moon_ai.engine import Context
 from moon_ai.ict.liquidity import Level
 from moon_ai.ict.structure import MarketStructureShift
 from moon_ai.sessions import NY, trading_day
@@ -65,21 +66,23 @@ def prev_day_range_bias(sessions: dict[date, tuple[float, float, float, float]],
 class LondonSweepAndReverse(SilverBullet):
     supports_bias = True
     extra_pools = frozenset({"prior_day"})
-    history_bars = 3 * 1440  # two prior sessions for the bias, plus today
 
-    def _prepare(self, history: Sequence[Bar], bars: Sequence[Bar], day: date) -> None:
-        if getattr(self, "_prepared_day", None) == day:
-            return
-        sessions = session_ohlc([b for b in history if b.instrument_id == bars[-1].instrument_id])
-        self._prepared_day = day
+    def _on_new_day(self, ctx: Context, day: date) -> None:
+        history = ctx.history(self.symbol, 3 * 1440)  # two prior sessions, plus today so far
+        inst = history[-1].instrument_id if history else None
+        sessions = session_ohlc([b for b in history if b.instrument_id == inst])
         self._bias: Bias = prev_day_range_bias(sessions, day)
-        self._midnight: float | None = _midnight_open(bars, day)
         prior = [d for d in sorted(sessions) if d < day]
+        self._prior_hl = sessions[prior[-1]][1:3] if prior else None
+        self._midnight: float | None = None
+
+    def _prepare(self, bars: Sequence[Bar], day: date) -> None:
+        if self._midnight is None:
+            self._midnight = _midnight_open(bars, day)
         self._prior: list[Level] = []
-        if "prior_day" in self.params.pools and prior:
-            _, h, lo, _ = sessions[prior[-1]]
-            start = bars[0].ts_open
-            inst = bars[-1].instrument_id
+        if "prior_day" in self.params.pools and self._prior_hl is not None:
+            h, lo = self._prior_hl
+            start, inst = bars[0].ts_open, bars[-1].instrument_id
             self._prior = [
                 Level("high", h, start, "prior_day", inst),
                 Level("low", lo, start, "prior_day", inst),
