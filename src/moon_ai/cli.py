@@ -36,6 +36,9 @@ def _parser() -> argparse.ArgumentParser:
     d.add_argument("--dry-run", action="store_true", help="only price the request")
     d.add_argument("--confirm", action="store_true", help="allow a download above the cap")
 
+    doc = sub.add_parser("doctor", help="check the setup and say what to fix")
+    doc.add_argument("--config", type=Path, help="TOML config overriding the defaults")
+
     b = sub.add_parser("backtest", help="backtest one setup over a date range")
     b.add_argument("setup", help="e.g. ny_am_silver_bullet")
     b.add_argument(
@@ -74,6 +77,12 @@ def main(
     args = _parser().parse_args(argv)
     if args.command == "backtest":
         return _backtest(args)
+    if args.command == "doctor":
+        from moon_ai.doctor import report, run_checks
+
+        text, code = report(run_checks(load_config(args.config)))
+        print(text)
+        return code
     cfg = load_config(args.config).data
 
     request = DownloadRequest(
