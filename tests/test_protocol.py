@@ -83,3 +83,18 @@ def test_judge_all_says_what_it_is_doing(tmp_path):
     judge_all(START, END, tmp_path, hooks=hooks, setups=["ote_pullback"], say=lines.append)
     assert lines[0].startswith("[1/1] ") and "testing default version" in lines[1]
     assert "trades, did not pass" in lines[2]
+
+
+def test_retests_whose_rule_is_not_built_are_skipped_not_crashed():
+    """On the real Mac, NY AM's 'first_tethered_fvg' retest raised NotImplementedError
+    and ended `backtest --all` halfway."""
+    trials = [t.name for t in load_setup_defaults()["ny_am_silver_bullet"].rescue]
+    hooks, ran = fake_hooks({"default": "fail"})
+    lines: list[str] = []
+    v = judge("ny_am_silver_bullet", START, END, hooks=hooks, say=lines.append)
+    unbuilt = {"first_tethered_fvg", "trade_with_bias_only"}
+    assert v.verdict == "retired"
+    assert ran == ["default", *(t for t in trials if t not in unbuilt)]
+    assert f"none of its {len(trials) - 2} pre-registered retests" in v.reasons[-2]
+    assert "first_tethered_fvg" in v.reasons[-1] and "trade_with_bias_only" in v.reasons[-1]
+    assert any("first_tethered_fvg: skipped, not built yet" in ln for ln in lines)
