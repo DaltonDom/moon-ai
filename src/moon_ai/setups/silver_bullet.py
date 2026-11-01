@@ -56,10 +56,25 @@ POOL_WINDOWS: dict[str, Window] = {
     "lunch": Window(time(12), time(13, 30)),
 }
 HISTORY_BARS = 1600  # more than one CME session of 1-minute bars
+# Diagnostics only (`moon-ai funnel`): the furthest step each day reached.
+FUNNEL = (
+    "in window",
+    "pools known",
+    "pool swept",
+    "structure shift",
+    "setup filters",
+    "fair value gap",
+    "displacement",
+    "valid stop",
+    "target pool",
+    "room to target",
+    "trade idea",
+)
 
 
 class SilverBullet:
     name = "silver_bullet"
+    funnel: dict[date, int] | None = None  # set by `moon-ai funnel`; never changes decisions
     supports_bias = False  # subclasses that implement `_accept` for the bias gate set this
     extra_pools: frozenset[str] = frozenset()
 
@@ -94,12 +109,19 @@ class SilverBullet:
         bars = [b for b in history if trading_day(b.ts_close) == day]
         if not bars or bars[-1].ts_close != now:
             return []
+        self._reach("in window")
         self._prepare(bars, day)
         cand = self._find(bars, now, day)
         if cand is not None:
+            self._reach("trade idea")
             self._done_days.add(day)
             return [cand]
         return []
+
+    def _reach(self, stage: str) -> None:
+        if self.funnel is not None:
+            day = self._seen_day
+            self.funnel[day] = max(self.funnel.get(day, -1), FUNNEL.index(stage))
 
     # --- hooks for variants (London) ------------------------------------------------
 
@@ -129,6 +151,8 @@ class SilverBullet:
         sweep_from = datetime.combine(ny_date, p.sweep_from or self.window.start, tzinfo=NY)
         swings = find_swings(bars, p.swing_n)
         pools = self._pools(bars, swings, sweep_from)
+        if pools:
+            self._reach("pools known")
         sweeps = [
             s
             for s in find_sweeps(
@@ -141,13 +165,14 @@ class SilverBullet:
             )
             if bars[s.index].ts_open >= sweep_from
         ]
-        shifts = [
-            m
-            for m in find_market_structure_shifts(
-                bars, swings, sweeps, p.mss_break, ict.mss_max_bars
-            )
-            if self._accept(m, bars)
-        ]
+        if sweeps:
+            self._reach("pool swept")
+        raw = find_market_structure_shifts(bars, swings, sweeps, p.mss_break, ict.mss_max_bars)
+        if raw:
+            self._reach("structure shift")
+        shifts = [m for m in raw if self._accept(m, bars)]
+        if shifts:
+            self._reach("setup filters")
         if not shifts:
             return None
         fvgs = find_fvgs(bars, self.tick, ict.fvg_min_size_ticks)
@@ -206,6 +231,7 @@ class SilverBullet:
         )
         if gap is None or not self._accept_gap(gap, sweep, bars):
             return None
+        self._reach("fair value gap")
         known = max(mss.known_at, gap.known_at)
         if known != now:  # emit exactly on the bar it all became known
             return None
@@ -213,18 +239,22 @@ class SilverBullet:
             d.direction == mss.direction and sweep.index <= d.index <= gap.index for d in disps
         ):
             return None
+        self._reach("displacement")
         near = gap.high if long else gap.low
         entry = _round(gap.ce, self.tick) if p.fvg_entry == "ce" else near
         off = p.stop_offset_ticks * self.tick
         stop = sweep.extreme - off if long else sweep.extreme + off
         if (entry <= stop) if long else (entry >= stop):
             return None  # the gap sits beyond the sweep extreme: no valid stop
+        self._reach("valid stop")
         target = self._draw_on_liquidity(bars, pools, entry, long, now)
         if target is None:
             return None
+        self._reach("target pool")
         objective = abs(target - entry)
         if p.min_objective_points is not None and objective < p.min_objective_points:
             return None
+        self._reach("room to target")
         _, window_end = window_bounds(ny_date, self.window)
         timeout = datetime.combine(ny_date, p.timeout, tzinfo=NY)
         return Candidate(

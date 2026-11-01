@@ -188,3 +188,20 @@ def test_the_kill_switch_does_not_end_a_backtest(store):
     assert r.summary["statuses"] == {"skipped:session": 1, "taken": 9}
     run = decode_json(read_run(r.folder, "runs"), "runs")[0]
     assert run["notes"]["kill_switch"].startswith("off")
+
+
+def test_funnel_counts_how_far_each_day_got_and_writes_no_trial(store, capsys):
+    args = ["funnel", "ny_am_silver_bullet", "--from", "2026-07-13", "--to", "2026-07-25"]
+    code = main([*args, "--store", str(store / "bars")])
+    out = capsys.readouterr().out
+    assert code == 0
+    import re
+
+    rows = (re.match(r"^\s+(.+?)\s+(\d+)(?:\s+\d+%)?$", ln) for ln in out.splitlines())
+    counts = {m[1]: int(m[2]) for m in rows if m}
+    # All 10 days reach a trade idea; then the trader's own skips (the roll day,
+    # and the real news calendar's blackouts) and the trades it took.
+    assert counts["in window"] == counts["trade idea"] == 10
+    trader = {k: v for k, v in counts.items() if k == "taken" or k.startswith("skipped:")}
+    assert sum(trader.values()) == 10 and counts["skipped:session"] == 1 and counts["taken"]
+    assert not (store / "runs").exists()  # a throwaway folder: never counted as a trial
