@@ -35,6 +35,32 @@ def _parser() -> argparse.ArgumentParser:
     d.add_argument("--max-cost", type=float, help="USD cap; default from config")
     d.add_argument("--dry-run", action="store_true", help="only price the request")
     d.add_argument("--confirm", action="store_true", help="allow a download above the cap")
+
+    b = sub.add_parser("backtest", help="backtest one setup over a date range")
+    b.add_argument("setup", help="e.g. ny_am_silver_bullet")
+    b.add_argument(
+        "--from",
+        dest="start",
+        type=date.fromisoformat,
+        required=True,
+        help="first trading day, YYYY-MM-DD",
+    )
+    b.add_argument(
+        "--to",
+        dest="end",
+        type=date.fromisoformat,
+        required=True,
+        help="trading day after the last one, YYYY-MM-DD (exclusive)",
+    )
+    b.add_argument("--trial", help="a pre-registered rescue trial name (default: the default)")
+    b.add_argument("--config", type=Path, help="TOML config overriding the defaults")
+    b.add_argument("--store", type=Path, help="local bar store root")
+    b.add_argument("--runs", type=Path, default=Path("data/runs"), help="where runs are written")
+    b.add_argument(
+        "--no-news",
+        action="store_true",
+        help="run without the news blackout (results will be optimistic)",
+    )
     return p
 
 
@@ -43,6 +69,8 @@ def main(
     client_factory: Callable[[str], HistoricalClient] = databento_client,
 ) -> int:
     args = _parser().parse_args(argv)
+    if args.command == "backtest":
+        return _backtest(args)
     cfg = load_config(args.config).data
 
     request = DownloadRequest(
@@ -69,6 +97,28 @@ def main(
         print("dry run: nothing downloaded")
     for path in result.files:
         print(f"wrote {path}")
+    return 0
+
+
+def _backtest(args: argparse.Namespace) -> int:
+    from moon_ai.backtest.runner import NewsCalendarMissing, run_backtest
+
+    try:
+        result = run_backtest(
+            args.setup,
+            args.start,
+            args.end,
+            trial=args.trial,
+            store_root=args.store,
+            runs_root=args.runs,
+            config=load_config(args.config),
+            news=not args.no_news,
+        )
+    except (NewsCalendarMissing, KeyError, ValueError) as exc:
+        print(f"refused: {exc}", file=sys.stderr)
+        return 2
+    print(result.line())
+    print(f"wrote {result.folder}")
     return 0
 
 
