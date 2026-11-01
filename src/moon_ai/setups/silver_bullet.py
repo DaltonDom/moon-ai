@@ -239,3 +239,13 @@ def _round(price: float, tick: float) -> float:
 @register("ny_am_silver_bullet")
 class NyAmSilverBullet(SilverBullet):
     """NY AM Silver Bullet: setup and entry inside 10:00-11:00 New York."""
+
+
+@register("ny_pm_silver_bullet")
+class NyPmSilverBullet(SilverBullet):
+    """NY PM Silver Bullet: setup and entry inside 14:00-15:00 New York.
+
+    Pools are the AM session (09:30-12:00), the lunch range (12:00-13:30) and
+    swings since 13:30. On FOMC statement days the news blackout (13:45-15:30)
+    blocks its entries, so it doesn't trade.
+    """
