@@ -120,6 +120,16 @@ def _parser() -> argparse.ArgumentParser:
         action="store_true",
         help="run without the news blackout (results will be optimistic)",
     )
+
+    fn = sub.add_parser(
+        "funnel", help="where a setup's trade ideas die, step by step (diagnostics only)"
+    )
+    fn.add_argument("setup", help="e.g. london_sweep_and_reverse")
+    fn.add_argument("--from", dest="start", type=date.fromisoformat, required=True)
+    fn.add_argument("--to", dest="end", type=date.fromisoformat, required=True)
+    fn.add_argument("--trial", help="a pre-registered rescue trial name")
+    fn.add_argument("--config", type=Path, help="TOML config overriding the defaults")
+    fn.add_argument("--store", type=Path, help="local bar store root")
     return p
 
 
@@ -142,6 +152,8 @@ def main(
     load_env_file()
     if args.command == "backtest":
         return _backtest(args)
+    if args.command == "funnel":
+        return _funnel(args)
     if args.command == "nightly":
         return _nightly(args)
     if args.command == "dashboard":
@@ -453,6 +465,44 @@ def _backtest(args: argparse.Namespace) -> int:
         import webbrowser
 
         webbrowser.open(page.resolve().as_uri())
+    return 0
+
+
+def _funnel(args: argparse.Namespace) -> int:
+    """Run a setup with its funnel switched on, into a throwaway folder, so it
+    never counts as a trial, and print how many days got through each step."""
+    import tempfile
+
+    from moon_ai.backtest.runner import NewsCalendarMissing, run_backtest
+    from moon_ai.setups.silver_bullet import FUNNEL
+
+    reached: dict[date, int] = {}
+    with tempfile.TemporaryDirectory() as tmp:
+        try:
+            result = run_backtest(
+                args.setup,
+                args.start,
+                args.end,
+                trial=args.trial,
+                store_root=args.store,
+                runs_root=Path(tmp),
+                config=load_config(args.config),
+                funnel=reached,
+            )
+        except (NewsCalendarMissing, KeyError, ValueError) as exc:
+            print(f"refused: {exc}", file=sys.stderr)
+            return 2
+    if not reached:
+        print(f"{args.setup} has no funnel (only the Silver Bullet family records one).")
+        return 1
+    print(f"{args.setup}: how many days got at least this far")
+    days = len(reached)
+    for i, stage in enumerate(FUNNEL):
+        n = sum(v >= i for v in reached.values())
+        print(f"  {stage:<16} {n:>5}  {n / days:>4.0%}")
+    print("then the trader:")
+    for status, n in sorted(result.summary["statuses"].items(), key=lambda kv: -kv[1]):
+        print(f"  {status:<24} {n:>5}")
     return 0
 
 

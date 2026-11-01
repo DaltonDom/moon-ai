@@ -97,6 +97,7 @@ def run_backtest(
     run_id: str | None = None,
     extra_notes: dict[str, Any] | None = None,
     second_bars: bool = True,
+    funnel: dict[date, int] | None = None,
 ) -> BacktestResult:
     """Backtest `setup` (its default, or one pre-registered rescue `trial`) over
     the trading days [start, end)."""
@@ -156,8 +157,11 @@ def run_backtest(
         },
     )
     journal = RunJournal(parquet, run_id, lambda s: config.instrument(s).tick_size)
+    strategy = REGISTRY[setup](params, config, symbol)
+    if funnel is not None:
+        strategy.funnel = funnel  # diagnostics only: records how far each day got
     trader = Trader(
-        [REGISTRY[setup](params, config, symbol)],
+        [strategy],
         journal,
         config,
         calendar=calendar,
