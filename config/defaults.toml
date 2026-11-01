@@ -1,0 +1,227 @@
+# moon-ai pre-registered setup defaults.
+#
+# This file is the pre-registration record (docs/design.md, "Setup testing
+# protocol"). It was written before any setup was backtested. Each setup's
+# default is tested first; a setup whose default fails gets at most 12 rescue
+# trials, listed below in advance, each changing exactly one parameter.
+# Every run, defaults included, is logged as a trial for the DSR and PBO.
+#
+# Don't edit a setup here after its first backtest. A change is a new
+# pre-registration, and the trials it adds are counted.
+#
+# Sources: ict-setup-definitions.md §2 and §4 (branch research/ict-setup-definitions),
+# ICT timestamps (#21, docs/research/ict-setup-timestamps.md), setup rules (#16),
+# ML labels (#9) for the time-outs. Times are New York wall-clock.
+
+[setups.ny_am_silver_bullet]
+title = "NY AM Silver Bullet"
+priority = 1
+# Setup and entry inside 10:00-11:00 (ICT 2023 lecture, tRq1hyGGtl4 08:12-14:10);
+# the sweep may come from 09:30. The trade may be held past 11:00.
+window = "ny_am_silver_bullet"
+sweep_from = "09:30"
+timeout = "15:55"
+pools = ["opening_range", "overnight", "session_swing"]
+# Minimum move on offer to the draw on liquidity, not a take-profit (#21).
+min_objective_points = 10.0
+
+  [[setups.ny_am_silver_bullet.rescue]]
+  name = "displacement_k_1.0"
+  displacement_k = 1.0
+  [[setups.ny_am_silver_bullet.rescue]]
+  name = "displacement_k_2.0"
+  displacement_k = 2.0
+  [[setups.ny_am_silver_bullet.rescue]]
+  name = "fvg_entry_ce"
+  fvg_entry = "ce"
+  [[setups.ny_am_silver_bullet.rescue]]
+  name = "first_tethered_fvg"
+  fvg_selection = "first_tethered"
+  [[setups.ny_am_silver_bullet.rescue]]
+  name = "min_objective_15"
+  min_objective_points = 15.0
+  [[setups.ny_am_silver_bullet.rescue]]
+  name = "min_objective_20"
+  min_objective_points = 20.0
+  [[setups.ny_am_silver_bullet.rescue]]
+  name = "trade_with_bias_only"
+  bias_gate = true
+  [[setups.ny_am_silver_bullet.rescue]]
+  name = "sweep_close_back_3"
+  sweep_close_back_bars = 3
+  [[setups.ny_am_silver_bullet.rescue]]
+  name = "mss_on_wick"
+  mss_break = "wick"
+  [[setups.ny_am_silver_bullet.rescue]]
+  name = "swing_n_2"
+  swing_n = 2
+  [[setups.ny_am_silver_bullet.rescue]]
+  name = "news_blocks_setup"
+  news_handling = "blocks_setup"
+
+[setups.ny_pm_silver_bullet]
+title = "NY PM Silver Bullet"
+priority = 2
+window = "ny_pm_silver_bullet"
+sweep_from = "13:30"
+timeout = "15:55"
+pools = ["am_session", "lunch", "session_swing"]
+min_objective_points = 10.0
+
+  [[setups.ny_pm_silver_bullet.rescue]]
+  name = "min_objective_5"
+  min_objective_points = 5.0
+  [[setups.ny_pm_silver_bullet.rescue]]
+  name = "displacement_k_1.0"
+  displacement_k = 1.0
+  [[setups.ny_pm_silver_bullet.rescue]]
+  name = "displacement_k_2.0"
+  displacement_k = 2.0
+  [[setups.ny_pm_silver_bullet.rescue]]
+  name = "fvg_entry_ce"
+  fvg_entry = "ce"
+  [[setups.ny_pm_silver_bullet.rescue]]
+  name = "first_tethered_fvg"
+  fvg_selection = "first_tethered"
+  [[setups.ny_pm_silver_bullet.rescue]]
+  name = "trade_with_bias_only"
+  bias_gate = true
+  [[setups.ny_pm_silver_bullet.rescue]]
+  name = "sweep_close_back_3"
+  sweep_close_back_bars = 3
+  [[setups.ny_pm_silver_bullet.rescue]]
+  name = "mss_on_wick"
+  mss_break = "wick"
+  [[setups.ny_pm_silver_bullet.rescue]]
+  name = "swing_n_2"
+  swing_n = 2
+  [[setups.ny_pm_silver_bullet.rescue]]
+  name = "news_blocks_setup"
+  news_handling = "blocks_setup"
+
+[setups.london_sweep_and_reverse]
+title = "London sweep-and-reverse"
+priority = 3
+# London killzone 02:00-05:00 (edges still UNVERIFIED, #28). The Judas swing
+# takes the Asian range against the previous-day-range bias. The London SB
+# 02:00-03:00 variant is dropped (#21: no source has it).
+window = "london_killzone"
+timeout = "09:30"
+pools = ["asia"]
+bias_proxy = "prev_day_range"
+bias_gate = true
+po3_filter = true
+
+  [[setups.london_sweep_and_reverse.rescue]]
+  name = "silver_bullet_window_only"
+  window = "london_silver_bullet"
+  [[setups.london_sweep_and_reverse.rescue]]
+  name = "also_prior_day_pools"
+  pools = ["asia", "prior_day"]
+  [[setups.london_sweep_and_reverse.rescue]]
+  name = "no_po3_filter"
+  po3_filter = false
+  [[setups.london_sweep_and_reverse.rescue]]
+  name = "either_side_of_asia"
+  bias_gate = false
+  [[setups.london_sweep_and_reverse.rescue]]
+  name = "displacement_k_1.0"
+  displacement_k = 1.0
+  [[setups.london_sweep_and_reverse.rescue]]
+  name = "displacement_k_2.0"
+  displacement_k = 2.0
+  [[setups.london_sweep_and_reverse.rescue]]
+  name = "fvg_entry_ce"
+  fvg_entry = "ce"
+  [[setups.london_sweep_and_reverse.rescue]]
+  name = "first_tethered_fvg"
+  fvg_selection = "first_tethered"
+  [[setups.london_sweep_and_reverse.rescue]]
+  name = "sweep_close_back_3"
+  sweep_close_back_bars = 3
+  [[setups.london_sweep_and_reverse.rescue]]
+  name = "mss_on_wick"
+  mss_break = "wick"
+  [[setups.london_sweep_and_reverse.rescue]]
+  name = "swing_n_2"
+  swing_n = 2
+
+[setups.ote_pullback]
+title = "OTE pullback"
+priority = 4
+# NY AM killzone default 08:30-11:00 (#16); OTE levels still UNVERIFIED (#28).
+window = "ny_am_index_hours"
+timeout = "15:55"
+ote_entry = 0.62
+ote_stop = 1.0
+
+  [[setups.ote_pullback.rescue]]
+  name = "killzone_07_10"
+  window = "ny_am_killzone"
+  [[setups.ote_pullback.rescue]]
+  name = "ote_entry_70.5"
+  ote_entry = 0.705
+  [[setups.ote_pullback.rescue]]
+  name = "ote_entry_79"
+  ote_entry = 0.79
+  [[setups.ote_pullback.rescue]]
+  name = "ote_stop_110"
+  ote_stop = 1.1
+  [[setups.ote_pullback.rescue]]
+  name = "require_fvg_overlap"
+  require_ote_overlap = true
+  [[setups.ote_pullback.rescue]]
+  name = "trade_with_bias_only"
+  bias_gate = true
+  [[setups.ote_pullback.rescue]]
+  name = "displacement_k_1.0"
+  displacement_k = 1.0
+  [[setups.ote_pullback.rescue]]
+  name = "displacement_k_2.0"
+  displacement_k = 2.0
+  [[setups.ote_pullback.rescue]]
+  name = "swing_n_2"
+  swing_n = 2
+
+[setups.ict_2022_model]
+title = "ICT 2022 model"
+priority = 5
+# Killzone with a medium/high-impact release inside it (ICT, 2022-07-23 post);
+# weekly-expansion bias is its own checklist step.
+window = "ny_am_index_hours"
+timeout = "15:55"
+pools = ["prior_day", "asia", "london", "session_swing"]
+bias_proxy = "weekly_expansion"
+bias_gate = true
+news_day_filter = true
+
+  [[setups.ict_2022_model.rescue]]
+  name = "killzone_07_10"
+  window = "ny_am_killzone"
+  [[setups.ict_2022_model.rescue]]
+  name = "any_day_not_just_news_days"
+  news_day_filter = false
+  [[setups.ict_2022_model.rescue]]
+  name = "fvg_in_discount_half"
+  require_discount_fvg = true
+  [[setups.ict_2022_model.rescue]]
+  name = "news_blocks_setup"
+  news_handling = "blocks_setup"
+  [[setups.ict_2022_model.rescue]]
+  name = "displacement_k_1.0"
+  displacement_k = 1.0
+  [[setups.ict_2022_model.rescue]]
+  name = "displacement_k_2.0"
+  displacement_k = 2.0
+  [[setups.ict_2022_model.rescue]]
+  name = "fvg_entry_ce"
+  fvg_entry = "ce"
+  [[setups.ict_2022_model.rescue]]
+  name = "first_tethered_fvg"
+  fvg_selection = "first_tethered"
+  [[setups.ict_2022_model.rescue]]
+  name = "sweep_close_back_3"
+  sweep_close_back_bars = 3
+  [[setups.ict_2022_model.rescue]]
+  name = "mss_on_wick"
+  mss_break = "wick"
