@@ -205,3 +205,18 @@ def test_funnel_counts_how_far_each_day_got_and_writes_no_trial(store, capsys):
     trader = {k: v for k, v in counts.items() if k == "taken" or k.startswith("skipped:")}
     assert sum(trader.values()) == 10 and counts["skipped:session"] == 1 and counts["taken"]
     assert not (store / "runs").exists()  # a throwaway folder: never counted as a trial
+
+
+def test_diagnose_explains_a_run(store):
+    from moon_ai.backtest.diagnose import diagnose
+
+    bt(store, "ny_am_silver_bullet.default.x.1")
+    out = "\n".join(
+        diagnose("ny_am_silver_bullet", store / "runs", store_root=store / "bars", ml=True)
+    )
+    # 9 trades alternating win/loss (5 wins at the 112 target, 4 at the 96.25 stop).
+    assert "9 trades" in out and "win rate 56%" in out
+    assert "costs take" in out and "losers that were up at least 1R first" in out
+    assert "exits: stop 4, target 5" in out
+    assert "2. Where it wins and loses" in out and "3. Can ML pick the good ones?" in out
+    assert diagnose("ote_pullback", store / "runs")[0].startswith("No ote_pullback")
