@@ -162,6 +162,9 @@ CANDIDATE_STATUSES = frozenset(
         "skipped:london_min_stop",
         "skipped:daily_stop",
         "skipped:session",
+        "skipped:busy",
+        "skipped:kill_switch",
+        "skipped:size",
         "unfilled",
     }
 )

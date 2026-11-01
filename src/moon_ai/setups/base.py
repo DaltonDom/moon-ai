@@ -163,6 +163,8 @@ class Candidate:
     stop: float
     target: float
     timeout: datetime
+    # An entry not filled by this time is cancelled (e.g. the Silver Bullet window end).
+    entry_deadline: datetime | None = None
     rule_results: dict[str, Any] = field(default_factory=dict)
     features: dict[str, Any] = field(default_factory=dict)
     feature_set: str = ""
