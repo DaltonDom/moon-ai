@@ -51,8 +51,8 @@ SETUP_BARS = {
 }
 
 
-def scan_all(bars, params=AM):
-    setup = NyAmSilverBullet(params, CFG)
+def scan_all(bars, params=AM, cls=NyAmSilverBullet):
+    setup = cls(params, CFG)
     found = []
 
     class Collect:
