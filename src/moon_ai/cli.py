@@ -126,9 +126,10 @@ def _backtest(args: argparse.Namespace) -> int:
 
     ev = evaluate(result.folder, store_root=args.store, config=load_config(args.config))
     lo, hi = ev.edge_ci
+    edge = "no trades to compare" if lo != lo else f"{lo:+.3f}R to {hi:+.3f}R per trade (95% CI)"
     print(
-        f"verdict: {ev.verdict} | edge vs random entries {lo:+.3f}R to {hi:+.3f}R per trade "
-        f"(95% CI) | not-just-luck (DSR) {ev.dsr:.2f} over {ev.n_trials} trial(s)"
+        f"verdict: {ev.verdict} | edge vs random entries {edge} | "
+        f"not-just-luck (DSR) {ev.dsr:.2f} over {ev.n_trials} trial(s)"
     )
     for reason in ev.reasons:
         print(f"  - {reason}")

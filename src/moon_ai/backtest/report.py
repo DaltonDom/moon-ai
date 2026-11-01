@@ -161,7 +161,9 @@ def render(
             _check(
                 lo > 0 if lo == lo else False,
                 "Beats random entries",
-                f"{_usd(lo * risk_usd)} to {_usd(hi * risk_usd)} per trade",
+                "no trades to compare"
+                if lo != lo
+                else f"{_usd(lo * risk_usd)} to {_usd(hi * risk_usd)} per trade",
                 "Compared with 1,000 sets of random trades in the same window with the same stops "
                 "and targets. The whole range must be above $0.",
             ),
@@ -239,8 +241,8 @@ def render(
 <tr><th>Entry (New York)</th><th>Side</th><th class=n>Entry</th><th class=n>Exit</th>
 <th>Exit reason</th><th class=n>Result</th><th class=n>R</th></tr>{trade_rows}</table></div></section>
 <details class="card"><summary>Advanced numbers</summary><dl>
-<dt>Random-entry average</dt><dd>{ev.random_mean_r:+.3f}R per trade</dd>
-<dt>Edge vs random (95% CI)</dt><dd>{lo:+.3f}R to {hi:+.3f}R per trade</dd>
+<dt>Random-entry average</dt><dd>{"no trades" if ev.random_mean_r != ev.random_mean_r else f"{ev.random_mean_r:+.3f}R per trade"}</dd>
+<dt>Edge vs random (95% CI)</dt><dd>{"no trades" if lo != lo else f"{lo:+.3f}R to {hi:+.3f}R per trade"}</dd>
 <dt>Deflated Sharpe (DSR)</dt><dd>{ev.dsr:.3f} over {ev.n_trials} trial(s); the "not just luck" score</dd>
 <dt>PBO</dt><dd>{pbo}; chance the best version is overfit</dd>
 <dt>Sharpe / Sortino</dt><dd>{m.sharpe:.2f} / {m.sortino:.2f} (yearly, on daily results)</dd>
