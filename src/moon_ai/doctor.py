@@ -8,8 +8,10 @@ fine for now (e.g. the nightly job not installed yet).
 from __future__ import annotations
 
 import os
+import platform
 import shutil
 import sqlite3
+import subprocess
 import sys
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
@@ -164,6 +166,37 @@ def check_nightly(agents: Path = LAUNCH_AGENTS) -> Result:
     return Result("ok", "Nightly job", f"Installed ({', '.join(p.stem for p in plists)}).")
 
 
+def _apple_chip() -> bool:
+    """True on Apple silicon, even when this Python runs in Intel mode (Rosetta)."""
+    try:
+        out = subprocess.run(
+            ["sysctl", "-n", "hw.optional.arm64"], capture_output=True, text=True, timeout=5
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return out.stdout.strip() == "1"
+
+
+def check_native(
+    system: str | None = None,
+    machine: str | None = None,
+    apple_chip: Callable[[], bool] = _apple_chip,
+) -> Result:
+    """Polars crashes or crawls when Python runs in Intel mode on an Apple-chip Mac."""
+    system = system or platform.system()
+    machine = machine or platform.machine()
+    if system == "Darwin" and machine == "x86_64" and apple_chip():
+        return Result(
+            "fail",
+            "Native Python",
+            "Python is running in Intel mode (Rosetta) on an Apple-chip Mac.",
+            "Install the native uv (`curl -LsSf https://astral.sh/uv/install.sh | sh`), then "
+            "`rm -rf .venv && uv venv --python cpython-3.12-macos-aarch64 --managed-python "
+            "&& uv sync`.",
+        )
+    return Result("ok", "Native Python", f"Python runs natively ({machine}).")
+
+
 def run_checks(
     config: Config, today: date | None = None, environ: Mapping[str, str] | None = None
 ) -> list[Result]:
@@ -171,6 +204,7 @@ def run_checks(
     root = Path(config.data.store_root)
     checks: list[Callable[[], Result | list[Result]]] = [
         check_python,
+        check_native,
         lambda: check_keys(os.environ if environ is None else environ),
         lambda: check_bars(BarStore(root, config.data.dataset), "MNQ.v.0", today),
         lambda: check_disk(root),

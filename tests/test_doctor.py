@@ -7,6 +7,7 @@ from moon_ai.doctor import (
     check_disk,
     check_journal,
     check_keys,
+    check_native,
     check_news,
     check_nightly,
     check_python,
@@ -82,3 +83,11 @@ def test_report_reads_as_sentences():
     assert "nothing blocking" in text
     _, code = report([Result("fail", "c", "No price data.", "Download it.")])
     assert code == 1
+
+
+def test_intel_mode_python_on_an_apple_chip_fails():
+    r = check_native("Darwin", "x86_64", apple_chip=lambda: True)
+    assert r.level == "fail" and "Rosetta" in r.message and "aarch64" in r.fix
+    assert check_native("Darwin", "arm64", apple_chip=lambda: True).level == "ok"
+    assert check_native("Darwin", "x86_64", apple_chip=lambda: False).level == "ok"  # Intel Mac
+    assert check_native("Linux", "x86_64", apple_chip=lambda: True).level == "ok"
