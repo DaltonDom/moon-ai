@@ -126,3 +126,18 @@ Larger sizes earn more after fees but blow nearly every account. That's a "buy e
 The other plans with our cap at $200: LucidPro blows 51%, Tradeify Growth 54% (+$221 a month), and Select Daily 59% (+$351 a month).
 
 **What happens next, as pre-registered:** the holdout look, one run each on MNQ and MES. Separately, round 2 (the paper's trailing stop and re-entry) aims to make the economics worth it.
+
+## Check 3 result: the holdout (2025-11-01 to 2026-11-01), failed
+
+These were one-time looks, logged in `data/holdout_checks.jsonl` on the Mac. The rule set in advance was net R above 0 and an edge over random above 0, on both markets.
+
+| Market | Trades | Win % | Net | Avg per trade | Edge vs random (95% CI) | DSR |
+|---|---|---|---|---|---|---|
+| MNQ | 107 | 41% | −11.3R (−$3,726) | −0.106R | −0.307 to +0.143R | 0.13 |
+| MES | 132 | 39% | −14.2R (−$6,102) | −0.108R | −0.298 to +0.200R | 0.14 |
+
+The combined LucidFlex replay over the year (for information only): no evaluation passes at any risk level.
+
+**Verdict: the noise-area breakout (default) fails the holdout.** It does not go to paper trading. The edge that showed in 2020–2022 had been shrinking since 2023 (+0.02 to +0.08R per trade), and in the sealed year it turned negative on both markets. This is what the holdout is for. At 1% risk, trading it live over the last year would have lost about $10,000 across the two markets.
+
+**Effect on later work:** we have now seen how this family did in the holdout year. Any later noise-breakout variant (the round 2 planned above) can still take its one logged look. That look is no longer a fully clean test for this family, though, so for it **3 months of paper trading on new data is the deciding test.**
