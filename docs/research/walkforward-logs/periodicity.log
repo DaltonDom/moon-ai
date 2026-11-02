@@ -1,0 +1,5 @@
+warning: The `UV_NATIVE_TLS` environment variable is deprecated and will be removed in a future release. Use `UV_SYSTEM_CERTS` instead.
+MNQ 1596 days (2019-06-03 to 2025-10-31), MES 1598 days
+N=20: corr MNQ -0.0177 (n=20163) MES -0.0111 | MNQ 18552 trades -0.0181R/trade, daily-R CI [-0.261, -0.160], Sharpe/yr -3.26, DSR 0.000 | MES -0.0411R/trade -> fail
+N=40: corr MNQ -0.0113 (n=19903) MES -0.0121 | MNQ 18372 trades -0.0149R/trade, daily-R CI [-0.221, -0.122], Sharpe/yr -2.68, DSR 0.000 | MES -0.0385R/trade -> fail
+EXIT 0

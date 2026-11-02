@@ -150,3 +150,18 @@ In order of expected value per dollar:
 - more rule variants on 1-minute bars (about 310 tried, and the luck bar keeps rising);
 - cross-account hedging (banned);
 - any vendor "AI bot" without a verifiable live record.
+
+## 5. Result: same-half-hour periodicity FAILS (run 2026-11-02, research data 2019-06 to 2025-10)
+
+| Lookback | Predictive correlation (MNQ / MES) | MNQ trades | MNQ net R per trade | MNQ daily-R 95% CI | Sharpe a year | DSR | MES net R per trade |
+|---|---|---|---|---|---|---|---|
+| 20 days | −0.018 / −0.011 | 18,552 | −0.018 | −0.261 to −0.160 | −3.26 | 0.000 | −0.041 |
+| 40 days | −0.011 / −0.012 | 18,372 | −0.015 | −0.221 to −0.122 | −2.68 | 0.000 | −0.039 |
+
+- **The effect runs the other way on index futures.** A half-hour slightly *reverses* its recent average (correlation about −0.015, t ≈ −2) instead of repeating it as Heston, Korajczyk & Sadka found for single stocks.
+- **Fading it is not worth a trial.** The reversal is worth about +0.01R a trade before costs, and costs are about 0.0075R a trade. That leaves about +0.003R, against the +0.05R or more that section 1 needs even with many trades a day.
+- **Retired.** The luck count is now about 314 versions. Log: `walkforward-logs/periodicity.log`.
+
+## 6. Kronos: not run in the cloud
+
+The network policy blocks huggingface.co, where the model weights live. It runs on the Mac with the commands in section 3, or here once huggingface.co is added to the environment's allowed domains.
