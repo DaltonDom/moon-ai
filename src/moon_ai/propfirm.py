@@ -26,7 +26,7 @@ import math
 import statistics
 import tomllib
 from collections import Counter
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Literal
@@ -36,6 +36,7 @@ from moon_ai.journal import decode_json, read_run
 from moon_ai.sessions import to_ny
 
 FUNDED_DAYS = 365  # each funded account is followed for at most a year
+EVAL_DAYS = 365  # an evaluation not passed within a year counts as failed ("too slow")
 RULES_PATH = Path(__file__).resolve().parents[2] / "config" / "prop_firms.toml"
 Drawdown = Literal["eod_trailing", "intraday_trailing", "static"]
 
@@ -52,6 +53,7 @@ class Trade:
     risk: float  # entry to stop
     worst: float  # worst open P&L, <= 0
     best: float = 0.0  # best open P&L, >= 0
+    exit: datetime | None = None  # orders trades when runs are combined
 
 
 def trades_from_run(folder: Path, config: Config | None = None) -> list[Trade]:
@@ -78,6 +80,7 @@ def trades_from_run(folder: Path, config: Config | None = None) -> list[Trade]:
                 risk=risk,
                 worst=min((t["mae_r"] or 0.0) * risk, 0.0, t["net_usd"] / n),
                 best=max((t["mfe_r"] or 0.0) * risk, 0.0, t["net_usd"] / n),
+                exit=t["exit_time"],
             )
         )
     return out
@@ -135,6 +138,23 @@ class Rules:
     eval_fee: float | None = None  # None: price not confirmed
     activation_fee: float = 0.0
     source: str = ""  # where the numbers came from, and when
+
+
+def with_daily_cap(rules: Rules, cap: float) -> Rules:
+    """Our own soft daily loss cap (design.md: "a daily loss cap set inside the
+    firm's limit") on top of the firm's rules, in both phases."""
+
+    def capped(ph: Phase) -> Phase:
+        if ph.daily_loss is not None and ph.daily_loss <= cap:
+            return ph
+        return replace(ph, daily_loss=cap, daily_loss_hard=False)
+
+    return replace(
+        rules,
+        title=f"{rules.title}, our daily cap ${cap:,.0f}",
+        evaluation=capped(rules.evaluation),
+        funded=capped(rules.funded),
+    )
 
 
 def load_rules(path: Path = RULES_PATH) -> dict[str, Rules]:
@@ -255,6 +275,14 @@ class Attempt:
     funded_days: int = 0  # calendar days funded
 
 
+def combine(*runs: list[Trade]) -> list[Trade]:
+    """Several runs' trades as one account's, in exit order (e.g. MNQ and MES)."""
+    return sorted(
+        (t for r in runs for t in r),
+        key=lambda t: (t.session, t.exit or datetime.max.replace(tzinfo=None)),
+    )
+
+
 def _days(trades: list[Trade]) -> list[list[Trade]]:
     out: list[list[Trade]] = []
     for t in trades:
@@ -268,7 +296,10 @@ def _days(trades: list[Trade]) -> list[list[Trade]]:
 def _evaluate(days: list[list[Trade]], i: int, rules: Rules, risk_usd: float):
     ph = rules.evaluation
     acc = Account(ph)
+    first = days[i][0].session
     for k in range(i, len(days)):
+        if (days[k][0].session - first).days >= EVAL_DAYS:
+            return "failed", "too slow", k - 1, acc
         for t in days[k]:
             if acc.done_for_day(t.session):
                 break
@@ -451,7 +482,7 @@ def lines(summaries: list[Summary], rules: Rules) -> list[str]:
             f"{fee:>13}  {net:>10}"
         )
     out += [
-        "  passed: share of evaluations that hit the target before breaking a rule",
+        "  passed: share of evaluations that hit the target within a year without breaking a rule",
         "  payout/month: your share, averaged over all the time accounts were funded",
         "  blown in 1yr: share of funded accounts that broke a rule within their first year",
         "  fees per pass: evaluation fees spent, on average, to get one funded account",

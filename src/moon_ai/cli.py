@@ -166,6 +166,12 @@ def _parser() -> argparse.ArgumentParser:
         default=[100, 200, 300, 400, 500],
         help="USD risked per trade (default: 100 200 300 400 500)",
     )
+    pf.add_argument(
+        "--combine", action="store_true", help="replay all the runs together as one account"
+    )
+    pf.add_argument(
+        "--daily-cap", type=float, help="our own soft daily loss cap in USD, inside the firm's"
+    )
     pf.add_argument("--config", type=Path, help="TOML config overriding the defaults")
     return p
 
@@ -174,6 +180,10 @@ def _propfirm(args: argparse.Namespace) -> int:
     from moon_ai.propfirm import lines, load_rules, score, trades_from_run
 
     firms = load_rules()
+    if args.daily_cap is not None:
+        from moon_ai.propfirm import with_daily_cap
+
+        firms = {k: with_daily_cap(v, args.daily_cap) for k, v in firms.items()}
     names = args.firm or list(firms)
     unknown = [n for n in names if n not in firms]
     if unknown:
@@ -182,16 +192,20 @@ def _propfirm(args: argparse.Namespace) -> int:
         )
         return 2
     from moon_ai.journal import decode_json, read_run
+    from moon_ai.propfirm import combine
 
+    groups = []
     for run in args.run:
         if not (run / "run.json").exists():
             print(f"refused: {run} is not a backtest run folder", file=sys.stderr)
             return 2
         notes = decode_json(read_run(run, "runs"), "runs")[0]["notes"] or {}
-        if notes.get("stress"):
-            continue
-        trades = trades_from_run(run, load_config(args.config))
-        print(f"{run.name}: {len(trades)} trades")
+        if not notes.get("stress"):
+            groups.append((run.name, trades_from_run(run, load_config(args.config))))
+    if args.combine:
+        groups = [(" + ".join(n for n, _ in groups), combine(*(t for _, t in groups)))]
+    for name, trades in groups:
+        print(f"{name}: {len(trades)} trades")
         for n in names:
             print()
             print("\n".join(lines(score(trades, firms[n], tuple(args.risk)), firms[n])))
@@ -500,6 +514,7 @@ def _backtest(args: argparse.Namespace) -> int:
                 args.start,
                 args.end,
                 ledger=args.runs.parent / "holdout_checks.jsonl",
+                symbol=args.symbol,
             )
         else:
             guard(args.start, args.end)

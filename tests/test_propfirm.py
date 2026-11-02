@@ -198,3 +198,35 @@ def test_cli_prints_a_table(tmp_path, capsys):
     out = capsys.readouterr().out
     assert "LucidFlex 50K" in out and "payout/month" in out
     assert main(["propfirm", str(r.folder), "--firm", "nope"]) == 2
+
+
+def test_combine_orders_two_runs_by_day_and_exit():
+    from datetime import UTC, datetime
+
+    from moon_ai.propfirm import combine
+
+    def x(i, hour):
+        return Trade(day(i), 1.0, 50.0, 0.0, 1.0, datetime(2024, 1, 2 + i, hour, tzinfo=UTC))
+
+    a, b = [x(0, 15), x(1, 15)], [x(0, 14), x(2, 14)]
+    assert [(t.session, t.exit.hour) for t in combine(a, b)] == [
+        (day(0), 14),
+        (day(0), 15),
+        (day(1), 15),
+        (day(2), 14),
+    ]
+
+
+def test_an_evaluation_slower_than_a_year_fails():
+    trades = [t(i * 7, 10) for i in range(60)]  # +$40 a week: never reaches $3,000 in a year
+    a = replay(trades, rules(), risk_usd=200)[0]
+    assert a.outcome == "failed" and a.reason == "too slow"
+
+
+def test_our_daily_cap_sits_inside_the_firms():
+    from moon_ai.propfirm import with_daily_cap
+
+    r = with_daily_cap(rules(), 1000)
+    assert r.evaluation.daily_loss == 1000 and not r.evaluation.daily_loss_hard
+    strict = Rules(**{**rules().__dict__, "funded": Phase(2000, "static", daily_loss=800)})
+    assert with_daily_cap(strict, 1000).funded.daily_loss == 800  # the firm's is tighter

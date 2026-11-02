@@ -46,6 +46,7 @@ class Signoff:
     setup: str
     trial: str
     at: str
+    symbol: str = "MNQ.v.0"
 
 
 def checks(ledger: Path = LEDGER) -> list[Signoff]:
@@ -54,7 +55,14 @@ def checks(ledger: Path = LEDGER) -> list[Signoff]:
     return [Signoff(**json.loads(line)) for line in ledger.read_text().splitlines() if line]
 
 
-def sign_off(setup: str, trial: str, start: date, end: date, ledger: Path = LEDGER) -> Signoff:
+def sign_off(
+    setup: str,
+    trial: str,
+    start: date,
+    end: date,
+    ledger: Path = LEDGER,
+    symbol: str = "MNQ.v.0",
+) -> Signoff:
     """Record a finalist's one allowed look at the holdout, or refuse it.
 
     The run must cover the holdout and nothing else, so research data and
@@ -64,9 +72,11 @@ def sign_off(setup: str, trial: str, start: date, end: date, ledger: Path = LEDG
         raise HoldoutLocked(
             f"a sign-off run covers exactly the holdout: --from {HOLDOUT_START} --to {HOLDOUT_END}"
         )
-    if any(c.setup == setup and c.trial == trial for c in checks(ledger)):
-        raise HoldoutLocked(f"{setup} ({trial}) already had its one look at the holdout")
-    s = Signoff(setup, trial, datetime.now(UTC).isoformat(timespec="seconds"))
+    if any((c.setup, c.trial, c.symbol) == (setup, trial, symbol) for c in checks(ledger)):
+        raise HoldoutLocked(
+            f"{setup} ({trial}) on {symbol} already had its one look at the holdout"
+        )
+    s = Signoff(setup, trial, datetime.now(UTC).isoformat(timespec="seconds"), symbol)
     ledger.parent.mkdir(parents=True, exist_ok=True)
     with ledger.open("a") as f:
         f.write(json.dumps(s.__dict__) + "\n")

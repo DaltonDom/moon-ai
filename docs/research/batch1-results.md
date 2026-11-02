@@ -74,3 +74,32 @@ Our version simplified the published strategy (Zarattini, Aziz & Barbon 2024) in
 3. The paper sizes by recent volatility. Ours uses a fixed dollar risk, which the replay then re-sizes.
 
 A round 2 for this setup should implement the paper's own rules, not new ideas. It also needs trailing-stop support in the simulated broker. Separately, the pre-registered MES check (check 2) still runs, to tell whether the edge carries over to another market at all.
+
+## Check 2 result: second market (MES), passed
+
+Same default rules on `MES.v.0`, 2019-06-01 up to 2025-11-01: 866 trades, +70.7R net (+0.082R per trade), win rate 47%. The edge over random entries is +0.031R to +0.271R (95% CI), with DSR 0.97. It stays profitable with double slippage. That clears the full go-forward bar on its own, not just the consistency rule.
+
+MNQ and MES are highly correlated, so this is strong support but not an independent discovery.
+
+**MES prop-firm replay** (pass rate counted the old way, before the fix below). At $200 risk per trade:
+
+| Plan | Passed | Days to pass | Blown in a year | Net a month |
+|---|---|---|---|---|
+| LucidFlex 50K | 44% | 176 | 67% | +$227 |
+| LucidPro 50K | 44% | 161 | 7% | payouts $103/mo; fee unknown |
+| Tradeify Growth 50K | 44% | 161 | 7% | +$89 |
+| Tradeify Select (Daily) | 44% | 176 | 7% | +$145 |
+
+Plans with a daily loss limit blow far fewer accounts. LucidFlex has none.
+
+## Replay fixes (2026-11-02, after seeing the MES table)
+
+- **Too-slow evaluations.** An evaluation not passed within 365 days now counts as failed ("too slow"). Before, such evaluations were dropped when the data ran out, which made the $100 row read "100% passed".
+- **Our own daily cap.** `--daily-cap USD` applies our own soft daily loss cap inside the firm's limit. The guardrail was agreed in design.md before any results; only its value is set here.
+
+## Check 1b, pre-registered 2026-11-02 before running
+
+- **Account:** MNQ and MES default runs replayed together as one account (`propfirm --combine`), with our daily cap at $1,000 (half the $2,000 drawdown).
+- **Bar:** unchanged and still on LucidFlex 50K. At some risk level, under 50% of funded accounts blown within a year and positive net a month. The other plans are reported but don't decide.
+- **If it passes:** the holdout look is the noise breakout default on MNQ and on MES, one run each, logged per market. Both must clear the check-3 rule.
+- **If it fails:** no holdout look. Next is round 2 with the paper's full rules (trailing stop, re-entry).
