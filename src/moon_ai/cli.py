@@ -148,7 +148,42 @@ def _parser() -> argparse.ArgumentParser:
     fn.add_argument("--trial", help="a pre-registered rescue trial name")
     fn.add_argument("--config", type=Path, help="TOML config overriding the defaults")
     fn.add_argument("--store", type=Path, help="local bar store root")
+    pf = sub.add_parser(
+        "propfirm", help="replay a backtest run through a prop firm's rules: pass rate, payouts"
+    )
+    pf.add_argument("run", type=Path, help="a run folder under data/runs")
+    pf.add_argument("--firm", action="append", help="rule set name (default: every firm)")
+    pf.add_argument(
+        "--risk",
+        type=float,
+        nargs="+",
+        default=[100, 200, 300, 400, 500],
+        help="USD risked per trade (default: 100 200 300 400 500)",
+    )
+    pf.add_argument("--config", type=Path, help="TOML config overriding the defaults")
     return p
+
+
+def _propfirm(args: argparse.Namespace) -> int:
+    from moon_ai.propfirm import lines, load_rules, score, trades_from_run
+
+    firms = load_rules()
+    names = args.firm or list(firms)
+    unknown = [n for n in names if n not in firms]
+    if unknown:
+        print(
+            f"refused: no rule set {', '.join(unknown)}; have {', '.join(firms)}", file=sys.stderr
+        )
+        return 2
+    if not (args.run / "run.json").exists():
+        print(f"refused: {args.run} is not a backtest run folder", file=sys.stderr)
+        return 2
+    trades = trades_from_run(args.run, load_config(args.config))
+    print(f"{args.run.name}: {len(trades)} trades")
+    for n in names:
+        print()
+        print("\n".join(lines(score(trades, firms[n], tuple(args.risk)), firms[n])))
+    return 0
 
 
 def load_env_file(path: Path | None = None) -> None:
@@ -172,6 +207,8 @@ def main(
         return _backtest(args)
     if args.command == "funnel":
         return _funnel(args)
+    if args.command == "propfirm":
+        return _propfirm(args)
     if args.command == "diagnose":
         from moon_ai.backtest.diagnose import diagnose
 

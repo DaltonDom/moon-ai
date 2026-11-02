@@ -1,0 +1,166 @@
+# Prop-firm rule sets for `moon-ai propfirm` (src/moon_ai/propfirm.py).
+#
+# Amounts are USD relative to the $50,000 start balance: max_loss 2000 means
+# the account fails at $48,000. Every number comes from
+# docs/research/prop-firm-rules-2026-11.md (researched 2026-11-02, through
+# search excerpts of the firms' own pages, not full pages). Re-check on the
+# live pages before buying an evaluation. "ASSUMED" marks a value the research
+# couldn't confirm; the choice made is the cautious one.
+#
+# Shared by every plan: EOD trailing $2,000 enforced on open equity, which
+# locks at start + $100 once the EOD balance reaches start + $2,100 and on the
+# first payout request; flat by 16:45 ET (our strategies are flat by 16:00);
+# soft daily limits (done for the day, not failed); 90/10 split.
+# Not modelled: Tradeify Lightning (instant funded, no evaluation).
+
+[firms.lucidflex_50k]
+title = "LucidFlex 50K"
+eval_fee = 130.0  # product listing, may be stale
+source = "Lucid help center via search, 2026-11-02; scaling tiers ASSUMED"
+
+  [firms.lucidflex_50k.evaluation]
+  max_loss = 2000.0
+  drawdown = "eod_trailing"
+  lock_floor_at = 100.0  # the lock table seems to cover both phases
+  profit_target = 3000.0
+  consistency_pct = 40.0  # best day <= 40% of total profit (evaluation only)
+  max_contracts = 40
+
+  [firms.lucidflex_50k.funded]
+  max_loss = 2000.0
+  drawdown = "eod_trailing"
+  lock_floor_at = 100.0
+  max_contracts = 40
+  # 20 micros to start, rising with profit to 40. Thresholds ASSUMED (Tradeify's).
+  scaling = [[0.0, 20], [1500.0, 30], [2000.0, 40]]
+
+  [firms.lucidflex_50k.payouts]
+  min_days = 5
+  min_profit_days = 5
+  profit_day_usd = 150.0
+  min_cycle_profit = 0.0  # the cycle's net profit must be positive
+  min_request = 500.0
+  max_request = 2000.0
+  max_pct_of_profit = 50.0
+  split = 0.9
+  floor_after_payout = 100.0
+
+[firms.lucidpro_50k]
+title = "LucidPro 50K"
+# eval_fee unknown: price not confirmed
+source = "Lucid help center via search, 2026-11-02; price UNVERIFIED"
+
+  [firms.lucidpro_50k.evaluation]
+  max_loss = 2000.0
+  drawdown = "eod_trailing"
+  lock_floor_at = 100.0
+  profit_target = 3000.0
+  daily_loss = 1200.0
+  max_contracts = 40
+
+  [firms.lucidpro_50k.funded]
+  max_loss = 2000.0
+  drawdown = "eod_trailing"
+  lock_floor_at = 100.0
+  daily_loss = 1200.0  # fixed $1,200 (a newer page mentions a 60%-of-peak option)
+  max_contracts = 40
+
+  [firms.lucidpro_50k.payouts]
+  min_days = 1
+  min_cycle_profit = 499.99  # at least $500 profit in the cycle
+  consistency_pct = 40.0  # best day <= 40% of the cycle's profit
+  buffer = 2100.0  # balance must stay >= $52,100
+  min_request = 500.0
+  max_request = [2000.0, 2500.0]
+  split = 0.9
+  floor_after_payout = 100.0
+
+[firms.tradeify_growth_50k]
+title = "Tradeify Growth 50K"
+eval_fee = 145.0
+source = "Tradeify help center via search, 2026-11-02; withdrawal floor ASSUMED"
+
+  [firms.tradeify_growth_50k.evaluation]
+  max_loss = 2000.0
+  drawdown = "eod_trailing"  # no lock in the evaluation
+  profit_target = 3000.0
+  daily_loss = 1250.0
+  min_days = 1
+  max_contracts = 40
+
+  [firms.tradeify_growth_50k.funded]
+  max_loss = 2000.0
+  drawdown = "eod_trailing"
+  lock_floor_at = 100.0
+  daily_loss = 1250.0  # rises to $2,000 above $53,000; kept at $1,250 (cautious)
+  max_contracts = 40
+
+  [firms.tradeify_growth_50k.payouts]
+  min_days = 5
+  min_profit_days = 5
+  profit_day_usd = 150.01  # "more than $150"
+  min_balance = 3000.0  # balance >= $53,000 to request
+  buffer = 2100.0  # ASSUMED: may withdraw down to the $52,100 lock level
+  consistency_pct = 35.0
+  min_request = 500.0
+  max_request = [1500.0, 2000.0, 2500.0, 3000.0]
+  split = 0.9
+  floor_after_payout = 100.0
+
+[firms.tradeify_select_flex_50k]
+title = "Tradeify Select 50K (Flex payouts)"
+eval_fee = 165.0
+source = "Tradeify help center via search, 2026-11-02; winning-day threshold ASSUMED ($0.01)"
+
+  [firms.tradeify_select_flex_50k.evaluation]
+  max_loss = 2000.0
+  drawdown = "eod_trailing"
+  profit_target = 3000.0
+  consistency_pct = 40.0
+  max_contracts = 40  # ASSUMED
+
+  [firms.tradeify_select_flex_50k.funded]
+  max_loss = 2000.0
+  drawdown = "eod_trailing"
+  lock_floor_at = 100.0
+  max_contracts = 40
+  scaling = [[0.0, 20], [1500.0, 30], [2000.0, 40]]
+
+  [firms.tradeify_select_flex_50k.payouts]
+  min_days = 5
+  min_profit_days = 5
+  profit_day_usd = 0.01
+  min_cycle_profit = 0.0
+  min_request = 250.0
+  max_request = 2500.0  # $3,000 for accounts bought before 2026-09-01
+  max_pct_of_profit = 50.0
+  split = 0.9
+  floor_after_payout = 100.0
+
+[firms.tradeify_select_daily_50k]
+title = "Tradeify Select 50K (Daily payouts)"
+eval_fee = 165.0
+source = "Tradeify help center via search, 2026-11-02; '2x profit since last request' cap not modelled"
+
+  [firms.tradeify_select_daily_50k.evaluation]
+  max_loss = 2000.0
+  drawdown = "eod_trailing"
+  profit_target = 3000.0
+  consistency_pct = 40.0
+  max_contracts = 40  # ASSUMED
+
+  [firms.tradeify_select_daily_50k.funded]
+  max_loss = 2000.0
+  drawdown = "eod_trailing"
+  lock_floor_at = 100.0
+  daily_loss = 1000.0
+  max_contracts = 40
+  scaling = [[0.0, 20], [1500.0, 30], [2000.0, 40]]
+
+  [firms.tradeify_select_daily_50k.payouts]
+  min_days = 1
+  buffer = 2100.0
+  min_request = 250.0
+  max_request = 1250.0
+  split = 0.9
+  floor_after_payout = 100.0
