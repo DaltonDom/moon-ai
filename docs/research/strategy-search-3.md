@@ -36,7 +36,15 @@ Synthetic trades of a known edge were run through the same business simulation t
 
 **Two independent trades a day:**
 
-EDGE_TABLE_2
+| Edge | Best plan and risk | Typical month | Bad case (p10) | Paths at $2k+ a month | 6 of 8 quarters | Evaluations a year |
+|---|---|---|---|---|---|---|
+| +0.00R | tradeify_growth_50k $800 | $781 | $-435 | 29% | 14% | 7.3 |
+| +0.05R | tradeify_growth_50k $800 | $2,501 | $-267 | 56% | 36% | 5.6 |
+| +0.10R | tradeify_growth_50k $800 | $3,878 | $578 | 77% | 56% | 4.5 |
+| +0.15R | tradeify_growth_50k $800 | $5,337 | $1,865 | 90% | 72% | 3.5 |
+| +0.20R | tradeify_growth_50k $800 | $6,876 | $4,188 | 98% | 86% | 2.6 |
+| +0.30R | tradeify_select_flex_50k $600 | $12,271 | $3,242 | 93% | 80% | 4.6 |
+| +0.40R | tradeify_select_flex_50k $600 | $16,852 | $12,186 | 99% | 97% | 2.3 |
 
 Logs are in `walkforward-logs/required-edge-{1,2}perday.log`.
 
