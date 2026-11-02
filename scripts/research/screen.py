@@ -86,7 +86,7 @@ def load(symbol: str) -> Market:
     on = df.filter(pl.col("m") < 0)
     on_hl = on.group_by("tday").agg(pl.col("high").max(), pl.col("low").min())
     on_map = {r[0]: (r[1], r[2]) for r in on_hl.iter_rows()}
-    days, O, H, L, C, inst = [], [], [], [], [], []
+    days, opens, highs, lows, closes, inst = [], [], [], [], [], []
     for (d,), g in rth.group_by(["tday"], maintain_order=True):
         if g.height < 380:
             continue  # half days and broken sessions
@@ -106,14 +106,14 @@ def load(symbol: str) -> Market:
         if np.isnan(arr["open"]).any():
             continue
         days.append(d)
-        O.append(arr["open"])
-        H.append(arr["high"])
-        L.append(arr["low"])
-        C.append(arr["close"])
+        opens.append(arr["open"])
+        highs.append(arr["high"])
+        lows.append(arr["low"])
+        closes.append(arr["close"])
         inst.append(g["instrument_id"][0])
-    O, H, L, C = map(np.array, (O, H, L, C))
+    o_, h_, l_, c_ = (np.array(x) for x in (opens, highs, lows, closes))
     n = len(days)
-    dh, dl, dc = H.max(1), L.min(1), C[:, -1]
+    dh, dl, dc = h_.max(1), l_.min(1), c_[:, -1]
     inst = np.array(inst)
     prev_close = np.r_[np.nan, dc[:-1]]
     prev_high = np.r_[np.nan, dh[:-1]]
@@ -133,10 +133,10 @@ def load(symbol: str) -> Market:
     return Market(
         symbol,
         days,
-        O,
-        H,
-        L,
-        C,
+        o_,
+        h_,
+        l_,
+        c_,
         prev_close,
         prev_high,
         prev_low,
