@@ -376,3 +376,86 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+
+
+@dataclass
+class Detail:
+    """Per day (nan where no trade), per contract, in USD unless noted."""
+
+    r: np.ndarray
+    pnl: np.ndarray  # net of commission and slippage
+    risk: np.ndarray  # entry fill to stop
+    worst: np.ndarray  # worst open P&L (net of commission), <= 0
+    best: np.ndarray
+    entry_min: np.ndarray  # minutes after 09:30
+    exit_min: np.ndarray
+
+
+def simulate_detail(
+    mk: Market,
+    side: np.ndarray,
+    entry: np.ndarray,
+    stop_dist: np.ndarray,
+    target_r: float | None = None,
+    exit_idx: int = TIMEOUT_IDX,
+) -> Detail:
+    """`simulate`, keeping each trade's dollars and open-P&L extremes for the prop replay."""
+    b = load_config().broker
+    tick, pv = mk.tick, mk.point_value
+    e_slip, s_slip = b.entry_slippage_ticks * tick, b.stop_slippage_ticks * tick
+    comm = 2 * b.commission_per_contract
+    n = len(mk.days)
+    d = Detail(*(np.full(n, np.nan) for _ in range(7)))
+    for i in np.nonzero(side)[0]:
+        if not mk.tradable[i]:
+            continue
+        s, e, dist = int(side[i]), int(entry[i]), float(stop_dist[i])
+        if not (0 < e <= exit_idx) or not dist > 0:
+            continue
+        px = mk.o[i, e] + s * e_slip
+        stop = px - s * dist
+        tgt = px + s * target_r * dist if target_r else None
+        exit_px, j_exit = None, exit_idx + 1
+        lo_seen, hi_seen = px, px
+        for j in range(e, exit_idx + 1):
+            o, hi, lo = mk.o[i, j], mk.h[i, j], mk.lo[i, j]
+            if s > 0:
+                if j > e and o <= stop:
+                    exit_px, j_exit = o - s_slip, j
+                    lo_seen = min(lo_seen, o)
+                    break
+                if lo <= stop:
+                    exit_px, j_exit = stop - s_slip, j
+                    lo_seen = min(lo_seen, stop)
+                    break
+                if tgt is not None and j > e and hi >= tgt + tick:
+                    exit_px, j_exit = (o if o >= tgt else tgt), j
+                    hi_seen = max(hi_seen, tgt)
+                    break
+            else:
+                if j > e and o >= stop:
+                    exit_px, j_exit = o + s_slip, j
+                    hi_seen = max(hi_seen, o)
+                    break
+                if hi >= stop:
+                    exit_px, j_exit = stop + s_slip, j
+                    hi_seen = max(hi_seen, stop)
+                    break
+                if tgt is not None and j > e and lo <= tgt - tick:
+                    exit_px, j_exit = (o if o <= tgt else tgt), j
+                    lo_seen = min(lo_seen, tgt)
+                    break
+            lo_seen, hi_seen = min(lo_seen, lo), max(hi_seen, hi)
+        if exit_px is None:
+            nxt = min(exit_idx + 1, RTH_MIN - 1)
+            exit_px = mk.o[i, nxt] - s * e_slip
+        pnl = s * (exit_px - px) * pv - comm
+        adverse = (lo_seen - px) if s > 0 else (px - hi_seen)
+        favour = (hi_seen - px) if s > 0 else (px - lo_seen)
+        d.r[i] = pnl / (dist * pv)
+        d.pnl[i] = pnl
+        d.risk[i] = dist * pv
+        d.worst[i] = min(adverse * pv - comm, pnl, 0.0)
+        d.best[i] = max(favour * pv - comm, pnl, 0.0)
+        d.entry_min[i], d.exit_min[i] = e, j_exit
+    return d
