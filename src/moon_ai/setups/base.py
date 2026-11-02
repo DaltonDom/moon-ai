@@ -80,6 +80,13 @@ class SetupParams:
     gap_min_atr: float | None = None  # gap_fill: smallest gap traded, in daily ATRs
     gap_max_atr: float | None = None  # gap_fill: largest gap traded
     gap_stop_mult: float = 1.0  # gap_fill: stop distance as a multiple of the gap
+    # noise_breakout round 2 (2026-11-02; Zarattini, Aziz & Barbon 2024 as published):
+    # "hold": keep the anchor stop to the close; "boundary_vwap": at each checkpoint,
+    # exit if the close is back inside the stricter of the noise boundary and VWAP.
+    exit_rule: Literal["hold", "boundary_vwap"] = "hold"
+    # "simple": one trade a day, held; "paper": the boundary/VWAP exit plus
+    # re-entry at later checkpoints (the 2-trades-a-session cap still applies).
+    noise_variant: Literal["simple", "paper"] = "simple"
 
 
 @dataclass(frozen=True)

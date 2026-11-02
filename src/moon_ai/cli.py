@@ -639,6 +639,7 @@ def _backtest_round2(args: argparse.Namespace) -> int:
             args.start,
             args.end,
             args.runs,
+            setups=args.setups,
             store_root=args.store,
             config=load_config(args.config),
             news=not args.no_news,

@@ -306,6 +306,16 @@ timeout = "15:55"
   name = "checkpoint_60"
   checkpoint_minutes = 60
 
+  # Round 2, registered 2026-11-02 after the default failed the holdout
+  # (docs/research/batch1-results.md). Not new ideas: the paper's own rules,
+  # which the default simplified. Listed in order; the first to pass stops it.
+  [[setups.noise_breakout.round2]]
+  name = "paper_rules"  # exit back inside max(boundary, VWAP) at checkpoints, and re-enter
+  noise_variant = "paper"
+  [[setups.noise_breakout.round2]]
+  name = "paper_exit"  # the exit rule alone, one trade a day
+  exit_rule = "boundary_vwap"
+
 [setups.intraday_momentum]
 title = "Intraday momentum (last half hour)"
 priority = 8

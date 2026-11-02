@@ -178,3 +178,27 @@ def test_same_bar_candidates_are_one_trade_owned_by_priority(tmp_path):
         ["ny_pm_silver_bullet"],
         "unfilled",
     )
+
+
+class ExitsAfter(Scripted):
+    """A scripted setup whose exit rule fires from bar `n` on."""
+
+    def __init__(self, name, script, n):
+        super().__init__(name, script)
+        self.n = n
+        self.asked = 0
+
+    def manage(self, cand, ctx):
+        self.asked += 1
+        return self.i >= self.n
+
+
+def test_a_setups_exit_rule_closes_the_trade_at_market(tmp_path):
+    rows = [QUIET, (100, 100.25, 99.5, 99.75), QUIET, QUIET, QUIET, QUIET]
+    s = ExitsAfter("ny_am_silver_bullet", {0: [{}]}, n=3)
+    out = go(tmp_path, rows, [s])
+    (t,) = out["trades"]
+    assert t["exit_reason"] == "rule_exit"
+    # Decided at bar 3's close, filled at bar 4's open.
+    assert t["exit_time"] == bars_from(rows)[4].ts_close
+    assert s.asked >= 2  # asked only while the trade was open, once per bar

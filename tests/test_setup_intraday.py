@@ -123,3 +123,38 @@ def test_noise_breakout_waits_for_a_checkpoint_outside_the_area():
     cands = run("noise_breakout", rth(DAY, prices))
     assert len(cands) == 1 and cands[0].side == "long"
     assert cands[0].decision_time == datetime.combine(DAY, time(10, 0), tzinfo=NY).astimezone(UTC)
+
+
+def test_noise_paper_rules_exit_back_inside_and_re_enter():
+    from dataclasses import replace as dc_replace
+
+    d = load_setup_defaults()["noise_breakout"]
+    paper = d.trial_params(d.trial("paper_rules"))
+    s = REGISTRY["noise_breakout"](paper, load_config())
+    assert not s.once_a_day
+    ctx = Context(broker=None, journal=None)
+    for day in WARMUP:
+        for b in quiet_day(day):
+            ctx._append(b)
+            s.scan(ctx)
+    # Out above the area at 10:00, back to the open by 10:30, out again at 11:00.
+    prices = [BASE] * 20 + [BASE + 40] * 30 + [BASE] * 30 + [BASE + 40] * 10
+    cands, exits = [], []
+    for b in rth(DAY, prices):
+        ctx._append(b)
+        new = s.scan(ctx)
+        cands += new
+        if cands and s.manage(cands[0], ctx):
+            exits.append(to_ny_time(ctx.now))
+    assert [to_ny_time(c.decision_time) for c in cands] == [time(10, 0), time(11, 0)]
+    assert time(10, 30) in exits  # back inside at the 10:30 checkpoint
+    simple = REGISTRY["noise_breakout"](d.params, load_config())
+    assert simple.once_a_day and not simple.manage(cands[0], ctx)
+    exit_only = dc_replace(d.params, exit_rule="boundary_vwap")
+    assert REGISTRY["noise_breakout"](exit_only, load_config()).once_a_day
+
+
+def to_ny_time(ts):
+    from moon_ai.sessions import to_ny
+
+    return to_ny(ts).time()

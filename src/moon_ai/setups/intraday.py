@@ -55,6 +55,12 @@ class _Day:
     on_high: float = float("-inf")  # overnight: 18:00 the evening before to 09:30
     on_low: float = float("inf")
     moves: dict[int, float] = field(default_factory=dict)  # minute after 09:30 -> |close/open - 1|
+    pv: float = 0.0  # cash-session sum of typical price x volume, for VWAP
+    volume: float = 0.0
+
+    @property
+    def vwap(self) -> float | None:
+        return self.pv / self.volume if self.volume else None
 
 
 @dataclass(frozen=True)
@@ -98,6 +104,8 @@ class DayBook:
                     return  # no 09:30 bar: no clean open today
                 d.open = bar.open
             d.high, d.low, d.close = max(d.high, bar.high), min(d.low, bar.low), bar.close
+            d.pv += (bar.high + bar.low + bar.close) / 3 * bar.volume
+            d.volume += bar.volume
             minute = (to_ny(bar.ts_close) - datetime.combine(d.date, RTH_OPEN, tzinfo=NY)).seconds
             d.moves[minute // 60] = abs(bar.close / d.open - 1)
 
@@ -151,8 +159,11 @@ class _Intraday:
         cand = self.decide(bar, ctx.now, to_ny(ctx.now), stats)
         if cand is None:
             return []
-        self._done.add(day)
+        if self.once_a_day:
+            self._done.add(day)
         return [cand]
+
+    once_a_day = True
 
     def decide(self, bar: Bar, now: datetime, ny: datetime, s: DayStats) -> Candidate | None:
         raise NotImplementedError
@@ -235,17 +246,49 @@ class OpeningRangeBreakout(_Intraday):
 
 @register("noise_breakout")
 class NoiseBreakout(_Intraday):
-    def decide(self, bar, now, ny, s):
+    """Round 2 adds the paper's own exit and re-entry (`exit_rule`, `noise_variant`)."""
+
+    @property
+    def once_a_day(self) -> bool:  # type: ignore[override]
+        return self.params.noise_variant != "paper"
+
+    def _bands(self, ny: datetime) -> tuple[float, float, DayStats] | None:
         p = self.params
         m = _minute(ny)
-        first = p.checkpoint_minutes
-        if m < first or m % p.checkpoint_minutes or ny.time() > time(15, 30):
+        if m < p.checkpoint_minutes or m % p.checkpoint_minutes or ny.time() > time(15, 30):
             return None
         sigma = self.book.noise(m)
-        if sigma is None:
+        s = self.book.stats()
+        if sigma is None or s is None:
             return None
         upper = max(s.open, s.prev_close) * (1 + p.noise_mult * sigma)
         lower = min(s.open, s.prev_close) * (1 - p.noise_mult * sigma)
+        return upper, lower, s
+
+    def manage(self, cand: Candidate, ctx: Context) -> bool:
+        """At a checkpoint, exit if the close is back inside the stricter of the
+        noise boundary and VWAP (long: below max(upper, VWAP))."""
+        p = self.params
+        if p.exit_rule != "boundary_vwap" and p.noise_variant != "paper":
+            return False
+        if ctx.now is None or trading_day(ctx.now) != trading_day(cand.decision_time):
+            return False
+        bands = self._bands(to_ny(ctx.now))
+        d = self.book.today
+        if bands is None or d is None or d.vwap is None:
+            return False
+        upper, lower, _ = bands
+        c = ctx.history(self.symbol, 1)[-1].close
+        if cand.side == "long":
+            return c < max(upper, d.vwap)
+        return c > min(lower, d.vwap)
+
+    def decide(self, bar, now, ny, s):
+        p = self.params
+        bands = self._bands(ny)
+        if bands is None:
+            return None
+        upper, lower, s = bands
         c = bar.close
         if lower <= c <= upper:
             return None
