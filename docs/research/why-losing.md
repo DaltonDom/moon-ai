@@ -52,3 +52,23 @@ Each trial changes one parameter and counts as a trial for the DSR. They run wit
 - **Trading with the 09:30 move vs. premium/discount of the overnight range.** These conflict with each other. One is chosen before its results are seen, if round 2 fails.
 
 **If round 2 fails,** the evidence supports concluding that these mechanical ICT reversal setups lack an edge on MNQ after costs. The next step would then be continuation-style setups, which trade with a stop-run instead of against it, rather than more rescues.
+
+## Round 2: result (run 2026-11-01/02, window 2019-06-01 to 2026-04-30)
+
+**Nothing passed.** All 8 round-2 trials ran, plus the now-built `trade_with_bias_only` retest for both Silver Bullets. None cleared the go-forward bar, so each setup's verdict still rests on its default run:
+
+| Setup | Verdict | Versions tried | Default: trades / edge vs random (95% CI) / DSR |
+|---|---|---|---|
+| NY AM Silver Bullet | retired | 13 | 258 / +0.068R (−0.166 to +0.321) / 0.20 |
+| NY PM Silver Bullet | retired | 12 | 289 / −0.211R (−0.512 to +0.074) / 0.00 |
+| London sweep-and-reverse | insufficient | 11 | 2 / — / — |
+| OTE pullback | retired | 11 | 1,169 / +0.086R (−0.024 to +0.192) / 0.00 |
+| ICT 2022 model | insufficient | 12 | 59 / +0.125R (−0.577 to +0.738) / 0.31 |
+
+That is 59 versions in all, with no pass. By the rule written above, these mechanical ICT reversal setups as coded lack an edge on MNQ after costs. What happens next:
+
+- **ICT faithfulness check (#101).** One time-boxed check that the 2022 model and NY AM Silver Bullet are coded as taught. Fixes are pre-registered as new trials.
+- **Non-ICT families (#102).** Continuation, opening range, overnight levels, momentum and mean reversion, researched only on data before the locked holdout (2025-11-01).
+- **These runs saw Nov 2025 – Apr 2026,** now inside the locked holdout. No ICT setup will be re-run on the shorter window, because re-running adds trials without adding information.
+
+Per-trial report cards are in `data/runs/<setup>.<trial>.2019-06-01_2026-04-30.*` on the Mac.
