@@ -141,3 +141,19 @@ The combined LucidFlex replay over the year (for information only): no evaluatio
 **Verdict: the noise-area breakout (default) fails the holdout.** It does not go to paper trading. The edge that showed in 2020–2022 had been shrinking since 2023 (+0.02 to +0.08R per trade), and in the sealed year it turned negative on both markets. This is what the holdout is for. At 1% risk, trading it live over the last year would have lost about $10,000 across the two markets.
 
 **Effect on later work:** we have now seen how this family did in the holdout year. Any later noise-breakout variant (the round 2 planned above) can still take its one logged look. That look is no longer a fully clean test for this family, though, so for it **3 months of paper trading on new data is the deciding test.**
+
+## Noise breakout round 2: the paper's own rules (run 2026-11-02 in the cloud session)
+
+This ran on MNQ, 2019-06-01 up to 2025-11-01, into `data/runs-research`. The cloud session now has its own copy of the research data (MNQ and MES up to 2025-11-01). It reproduced the Mac's default run exactly: 869 trades, edge +0.011 to +0.222R.
+
+| Version | Trades | Net | Per trade | Edge vs random (95% CI) | DSR (trials) | Verdict |
+|---|---|---|---|---|---|---|
+| default (for reference) | 869 | +92.7R | +0.107R | +0.011 to +0.222R | 1.00 (1) | passed research, failed holdout |
+| `paper_rules`: boundary/VWAP exit and re-entry | 1,168 | +76.2R | +0.065R | −0.003 to +0.161R | 0.99 (3) | **fail** |
+| `paper_exit`: exit only | 869 | +75.4R | +0.087R | −0.003 to +0.193R | 1.00 (4) | **fail** |
+
+- **Prop-firm replay,** LucidFlex with our $1,000 cap, for information only: `paper_rules` passes 2–42% of evaluations, and 100% of funded accounts are blown wherever any pass. That is worse than the default.
+- **Trial log:** the trial count includes the rescue trial `stop_atr_0.25`. It was run by mistake when a `--round2` run crashed (see commit b88feab).
+- **Limitation:** the random-entry baseline holds its trades to the time-out and does not apply the exit rule. That favours neither side in an obvious way, but it is not a like-for-like comparison.
+
+**Verdict: the noise-area breakout family is retired.** The published rules did not improve it on MNQ.
