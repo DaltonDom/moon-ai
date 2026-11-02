@@ -66,6 +66,20 @@ class SetupParams:
     news_handling: Literal["blocks_entry", "blocks_setup"] = "blocks_entry"
     news_day_filter: bool = False
     require_discount_fvg: bool = False
+    # Non-ICT intraday setups, batch 1 (#102; setups/intraday.py):
+    atr_days: int = 14  # daily ATR of the cash session, over finished days
+    noise_days: int = 14  # noise_breakout: days averaged for the noise area
+    or_minutes: int = 5  # orb_5m: opening-range length
+    checkpoint_minutes: int = 30  # noise_breakout: how often the area is checked
+    noise_mult: float = 1.0  # noise_breakout: area width multiplier
+    stop_atr: float | None = None  # stop distance as a fraction of the daily ATR
+    target_r: float | None = None  # target in R (None: hold to the time-out)
+    min_stop_ticks: int = 0  # skip a plan whose stop is closer than this
+    entry_time: time | None = None  # intraday_momentum: entry bar close (default 15:30)
+    min_move_atr: float | None = None  # intraday_momentum: skip a first half hour smaller than this
+    gap_min_atr: float | None = None  # gap_fill: smallest gap traded, in daily ATRs
+    gap_max_atr: float | None = None  # gap_fill: largest gap traded
+    gap_stop_mult: float = 1.0  # gap_fill: stop distance as a multiple of the gap
 
 
 @dataclass(frozen=True)
@@ -100,8 +114,19 @@ class SetupDefaults:
 
 
 # Fields whose default is None, so the generic coercion can't infer their type.
-_OPTIONAL_TIMES = {"sweep_from"}
-_OPTIONAL_FLOATS = {"min_objective_points", "ote_entry", "ote_stop", "min_rr", "min_leg_points"}
+_OPTIONAL_TIMES = {"sweep_from", "entry_time"}
+_OPTIONAL_FLOATS = {
+    "min_objective_points",
+    "ote_entry",
+    "ote_stop",
+    "min_rr",
+    "min_leg_points",
+    "stop_atr",
+    "target_r",
+    "min_move_atr",
+    "gap_min_atr",
+    "gap_max_atr",
+}
 
 
 def _apply(params: SetupParams, values: dict[str, Any], section: str) -> SetupParams:

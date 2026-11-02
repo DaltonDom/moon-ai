@@ -256,3 +256,103 @@ news_day_filter = true
   [[setups.ict_2022_model.round2]]
   name = "timeframe_5m"
   timeframe = 5
+
+# ---------------------------------------------------------------------------
+# Non-ICT batch 1, pre-registered 2026-11-02 before any backtest (#102;
+# design.md, "Revision 2026-11-02"; code in src/moon_ai/setups/intraday.py).
+# Each fires at most once a day, enters at market, and is flat by its
+# time-out, so they trade often enough for prop-firm payout rules. Research
+# runs stop at 2025-11-01 (the locked holdout). Each also has to pass the
+# prop-firm bar agreed for #102: in the LucidFlex 50K replay, under 50% of
+# funded accounts blown within a year and positive net a month at some risk.
+
+[setups.orb_5m]
+title = "Opening-range breakout (5 min)"
+priority = 6
+# Zarattini & Aziz (2023): the first 5-minute candle's direction, entered at
+# 09:35, stop at the range's other side, held to the close.
+window = "rth_first_hour"
+timeout = "15:55"
+
+  [[setups.orb_5m.rescue]]
+  name = "stop_atr_0.1"  # their later version: stop at 10% of the daily ATR
+  stop_atr = 0.1
+  [[setups.orb_5m.rescue]]
+  name = "target_2r"
+  target_r = 2.0
+  [[setups.orb_5m.rescue]]
+  name = "range_15m"
+  or_minutes = 15
+  [[setups.orb_5m.rescue]]
+  name = "min_stop_40"  # skip ranges under 10 points, where costs dominate
+  min_stop_ticks = 40
+
+[setups.noise_breakout]
+title = "Noise-area breakout"
+priority = 7
+# Zarattini, Aziz & Barbon (2024): trade only outside the 14-day average
+# intraday move from the open, checked every 30 minutes from 10:00; stop at
+# the area's anchor, held to the close.
+window = "rth_checkpoints"
+timeout = "15:55"
+
+  [[setups.noise_breakout.rescue]]
+  name = "stop_atr_0.25"
+  stop_atr = 0.25
+  [[setups.noise_breakout.rescue]]
+  name = "target_2r"
+  target_r = 2.0
+  [[setups.noise_breakout.rescue]]
+  name = "checkpoint_60"
+  checkpoint_minutes = 60
+
+[setups.intraday_momentum]
+title = "Intraday momentum (last half hour)"
+priority = 8
+# Gao, Han, Li & Zhou (2018): the return from the previous close to 10:00
+# sets the direction of a trade from 15:30 to the close.
+window = "last_half_hour"
+timeout = "15:59"
+stop_atr = 0.1
+
+  [[setups.intraday_momentum.rescue]]
+  name = "min_move_0.25"  # only after a first half hour of at least 0.25 ATR
+  min_move_atr = 0.25
+  [[setups.intraday_momentum.rescue]]
+  name = "stop_atr_0.25"
+  stop_atr = 0.25
+
+[setups.overnight_breakout]
+title = "Overnight-range breakout"
+priority = 9
+# The first 5-minute mark (09:35-11:00) that closes beyond the overnight high
+# or low; stop 0.25 daily ATR, target 2R.
+window = "rth_open_90"
+timeout = "15:55"
+stop_atr = 0.25
+target_r = 2.0
+
+  [[setups.overnight_breakout.rescue]]
+  name = "target_4r"
+  target_r = 4.0
+  [[setups.overnight_breakout.rescue]]
+  name = "stop_atr_0.15"
+  stop_atr = 0.15
+
+[setups.gap_fill]
+title = "Opening-gap fill"
+priority = 10
+# Mean reversion: a gap of 0.1-0.75 daily ATR from the previous close is faded
+# at 09:31 toward that close; stop one gap beyond the entry.
+window = "rth_first_minute"
+timeout = "15:55"
+gap_min_atr = 0.1
+gap_max_atr = 0.75
+gap_stop_mult = 1.0
+
+  [[setups.gap_fill.rescue]]
+  name = "stop_half_gap"
+  gap_stop_mult = 0.5
+  [[setups.gap_fill.rescue]]
+  name = "gap_max_0.4"
+  gap_max_atr = 0.4

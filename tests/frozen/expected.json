@@ -1,12 +1,264 @@
 {
  "setups": {
+  "gap_fill": {
+   "candidates": [
+    {
+     "candidate_id": "gap_fill:2026-10-20T13:31:00+00:00:long",
+     "entry": null,
+     "status": "taken",
+     "stop": 29444.25,
+     "tags": [],
+     "target": 29721.75
+    },
+    {
+     "candidate_id": "gap_fill:2026-10-21T13:31:00+00:00:short",
+     "entry": null,
+     "status": "taken",
+     "stop": 30071.25,
+     "tags": [],
+     "target": 29688.0
+    },
+    {
+     "candidate_id": "gap_fill:2026-10-23T13:31:00+00:00:long",
+     "entry": null,
+     "status": "taken",
+     "stop": 28936.25,
+     "tags": [],
+     "target": 29145.5
+    }
+   ],
+   "trades": [
+    {
+     "candidate_id": "gap_fill:2026-10-20T13:31:00+00:00:long",
+     "entry_price": 29572.75,
+     "entry_time": "2026-10-20T13:32:00+00:00",
+     "exit_price": 29443.5,
+     "exit_reason": "stop",
+     "exit_time": "2026-10-20T13:42:00+00:00",
+     "net_usd": -260.5,
+     "r": -1.013619
+    },
+    {
+     "candidate_id": "gap_fill:2026-10-21T13:31:00+00:00:short",
+     "entry_price": 29884.5,
+     "entry_time": "2026-10-21T13:32:00+00:00",
+     "exit_price": 30072.0,
+     "exit_reason": "stop",
+     "exit_time": "2026-10-21T16:40:00+00:00",
+     "net_usd": -377.0,
+     "r": -1.009371
+    },
+    {
+     "candidate_id": "gap_fill:2026-10-23T13:31:00+00:00:long",
+     "entry_price": 29053.0,
+     "entry_time": "2026-10-23T13:32:00+00:00",
+     "exit_price": 29145.5,
+     "exit_reason": "target",
+     "exit_time": "2026-10-23T13:46:00+00:00",
+     "net_usd": 366.0,
+     "r": 0.783726
+    }
+   ]
+  },
   "ict_2022_model": {
    "candidates": [],
    "trades": []
   },
+  "intraday_momentum": {
+   "candidates": [
+    {
+     "candidate_id": "intraday_momentum:2026-10-19T19:30:00+00:00:long",
+     "entry": null,
+     "status": "taken",
+     "stop": 29761.75,
+     "tags": [],
+     "target": 30223.75
+    },
+    {
+     "candidate_id": "intraday_momentum:2026-10-20T19:30:00+00:00:short",
+     "entry": null,
+     "status": "taken",
+     "stop": 29713.25,
+     "tags": [],
+     "target": 29221.0
+    },
+    {
+     "candidate_id": "intraday_momentum:2026-10-21T19:30:00+00:00:long",
+     "entry": null,
+     "status": "taken",
+     "stop": 29986.75,
+     "tags": [],
+     "target": 30498.25
+    },
+    {
+     "candidate_id": "intraday_momentum:2026-10-22T19:30:00+00:00:short",
+     "entry": null,
+     "status": "taken",
+     "stop": 29199.0,
+     "tags": [],
+     "target": 28682.0
+    },
+    {
+     "candidate_id": "intraday_momentum:2026-10-23T19:30:00+00:00:long",
+     "entry": null,
+     "status": "taken",
+     "stop": 29092.0,
+     "tags": [],
+     "target": 29644.75
+    }
+   ],
+   "trades": [
+    {
+     "candidate_id": "intraday_momentum:2026-10-19T19:30:00+00:00:long",
+     "entry_price": 29803.75,
+     "entry_time": "2026-10-19T19:31:00+00:00",
+     "exit_price": 29761.0,
+     "exit_reason": "stop",
+     "exit_time": "2026-10-19T19:51:00+00:00",
+     "net_usd": -437.5,
+     "r": -1.041667
+    },
+    {
+     "candidate_id": "intraday_momentum:2026-10-20T19:30:00+00:00:short",
+     "entry_price": 29668.25,
+     "entry_time": "2026-10-20T19:31:00+00:00",
+     "exit_price": 29670.25,
+     "exit_reason": "timeout",
+     "exit_time": "2026-10-20T20:00:00+00:00",
+     "net_usd": -30.0,
+     "r": -0.066667
+    },
+    {
+     "candidate_id": "intraday_momentum:2026-10-21T19:30:00+00:00:long",
+     "entry_price": 30033.25,
+     "entry_time": "2026-10-21T19:31:00+00:00",
+     "exit_price": 30019.75,
+     "exit_reason": "timeout",
+     "exit_time": "2026-10-21T20:00:00+00:00",
+     "net_usd": -145.0,
+     "r": -0.311828
+    },
+    {
+     "candidate_id": "intraday_momentum:2026-10-22T19:30:00+00:00:short",
+     "entry_price": 29151.5,
+     "entry_time": "2026-10-22T19:31:00+00:00",
+     "exit_price": 29132.75,
+     "exit_reason": "timeout",
+     "exit_time": "2026-10-22T20:00:00+00:00",
+     "net_usd": 177.5,
+     "r": 0.373684
+    },
+    {
+     "candidate_id": "intraday_momentum:2026-10-23T19:30:00+00:00:long",
+     "entry_price": 29141.75,
+     "entry_time": "2026-10-23T19:31:00+00:00",
+     "exit_price": 29118.25,
+     "exit_reason": "timeout",
+     "exit_time": "2026-10-23T20:00:00+00:00",
+     "net_usd": -196.0,
+     "r": -0.492462
+    }
+   ]
+  },
   "london_sweep_and_reverse": {
    "candidates": [],
    "trades": []
+  },
+  "noise_breakout": {
+   "candidates": [
+    {
+     "candidate_id": "noise_breakout:2026-10-19T15:30:00+00:00:long",
+     "entry": null,
+     "status": "taken",
+     "stop": 29779.0,
+     "tags": [],
+     "target": 31660.0
+    },
+    {
+     "candidate_id": "noise_breakout:2026-10-20T14:30:00+00:00:long",
+     "entry": null,
+     "status": "taken",
+     "stop": 29721.5,
+     "tags": [],
+     "target": 31426.5
+    },
+    {
+     "candidate_id": "noise_breakout:2026-10-21T16:00:00+00:00:long",
+     "entry": null,
+     "status": "taken",
+     "stop": 29874.0,
+     "tags": [],
+     "target": 31722.0
+    },
+    {
+     "candidate_id": "noise_breakout:2026-10-22T14:30:00+00:00:short",
+     "entry": null,
+     "status": "taken",
+     "stop": 29515.5,
+     "tags": [],
+     "target": 27796.75
+    },
+    {
+     "candidate_id": "noise_breakout:2026-10-23T15:00:00+00:00:long",
+     "entry": null,
+     "status": "taken",
+     "stop": 29145.25,
+     "tags": [],
+     "target": 30756.75
+    }
+   ],
+   "trades": [
+    {
+     "candidate_id": "noise_breakout:2026-10-19T15:30:00+00:00:long",
+     "entry_price": 29950.25,
+     "entry_time": "2026-10-19T15:31:00+00:00",
+     "exit_price": 29778.25,
+     "exit_reason": "stop",
+     "exit_time": "2026-10-19T17:08:00+00:00",
+     "net_usd": -346.0,
+     "r": -1.010219
+    },
+    {
+     "candidate_id": "noise_breakout:2026-10-20T14:30:00+00:00:long",
+     "entry_price": 29876.25,
+     "entry_time": "2026-10-20T14:31:00+00:00",
+     "exit_price": 29720.75,
+     "exit_reason": "stop",
+     "exit_time": "2026-10-20T15:14:00+00:00",
+     "net_usd": -313.0,
+     "r": -1.011309
+    },
+    {
+     "candidate_id": "noise_breakout:2026-10-21T16:00:00+00:00:long",
+     "entry_price": 30041.25,
+     "entry_time": "2026-10-21T16:01:00+00:00",
+     "exit_price": 30033.0,
+     "exit_reason": "timeout",
+     "exit_time": "2026-10-21T19:56:00+00:00",
+     "net_usd": -18.5,
+     "r": -0.055306
+    },
+    {
+     "candidate_id": "noise_breakout:2026-10-22T14:30:00+00:00:short",
+     "entry_price": 29358.75,
+     "entry_time": "2026-10-22T14:31:00+00:00",
+     "exit_price": 29150.75,
+     "exit_reason": "timeout",
+     "exit_time": "2026-10-22T19:56:00+00:00",
+     "net_usd": 414.0,
+     "r": 1.320574
+    },
+    {
+     "candidate_id": "noise_breakout:2026-10-23T15:00:00+00:00:long",
+     "entry_price": 29292.0,
+     "entry_time": "2026-10-23T15:01:00+00:00",
+     "exit_price": 29144.5,
+     "exit_reason": "stop",
+     "exit_time": "2026-10-23T17:28:00+00:00",
+     "net_usd": -297.0,
+     "r": -1.011925
+    }
+   ]
   },
   "ny_am_silver_bullet": {
    "candidates": [
@@ -139,6 +391,102 @@
      "exit_time": "2026-10-14T18:14:00+00:00",
      "net_usd": 1287.0,
      "r": 2.675676
+    }
+   ]
+  },
+  "orb_5m": {
+   "candidates": [
+    {
+     "candidate_id": "orb_5m:2026-10-19T13:35:00+00:00:short",
+     "entry": null,
+     "status": "taken",
+     "stop": 29806.25,
+     "tags": [],
+     "target": 29443.25
+    },
+    {
+     "candidate_id": "orb_5m:2026-10-20T13:35:00+00:00:short",
+     "entry": null,
+     "status": "taken",
+     "stop": 29606.0,
+     "tags": [],
+     "target": 28803.0
+    },
+    {
+     "candidate_id": "orb_5m:2026-10-21T13:35:00+00:00:long",
+     "entry": null,
+     "status": "taken",
+     "stop": 29825.5,
+     "tags": [],
+     "target": 30427.75
+    },
+    {
+     "candidate_id": "orb_5m:2026-10-22T13:35:00+00:00:long",
+     "entry": null,
+     "status": "taken",
+     "stop": 29464.75,
+     "tags": [],
+     "target": 30265.0
+    },
+    {
+     "candidate_id": "orb_5m:2026-10-23T13:35:00+00:00:long",
+     "entry": null,
+     "status": "taken",
+     "stop": 28993.25,
+     "tags": [],
+     "target": 29502.0
+    }
+   ],
+   "trades": [
+    {
+     "candidate_id": "orb_5m:2026-10-19T13:35:00+00:00:short",
+     "entry_price": 29772.75,
+     "entry_time": "2026-10-19T13:36:00+00:00",
+     "exit_price": 29807.0,
+     "exit_reason": "stop",
+     "exit_time": "2026-10-19T14:15:00+00:00",
+     "net_usd": -493.5,
+     "r": -1.052239
+    },
+    {
+     "candidate_id": "orb_5m:2026-10-20T13:35:00+00:00:short",
+     "entry_price": 29532.75,
+     "entry_time": "2026-10-20T13:36:00+00:00",
+     "exit_price": 29606.75,
+     "exit_reason": "stop",
+     "exit_time": "2026-10-20T13:59:00+00:00",
+     "net_usd": -450.0,
+     "r": -1.023891
+    },
+    {
+     "candidate_id": "orb_5m:2026-10-21T13:35:00+00:00:long",
+     "entry_price": 29880.75,
+     "entry_time": "2026-10-21T13:36:00+00:00",
+     "exit_price": 29824.75,
+     "exit_reason": "stop",
+     "exit_time": "2026-10-21T13:38:00+00:00",
+     "net_usd": -456.0,
+     "r": -1.031674
+    },
+    {
+     "candidate_id": "orb_5m:2026-10-22T13:35:00+00:00:long",
+     "entry_price": 29537.5,
+     "entry_time": "2026-10-22T13:36:00+00:00",
+     "exit_price": 29464.0,
+     "exit_reason": "stop",
+     "exit_time": "2026-10-22T13:46:00+00:00",
+     "net_usd": -447.0,
+     "r": -1.024055
+    },
+    {
+     "candidate_id": "orb_5m:2026-10-23T13:35:00+00:00:long",
+     "entry_price": 29039.25,
+     "entry_time": "2026-10-23T13:36:00+00:00",
+     "exit_price": 28992.5,
+     "exit_reason": "stop",
+     "exit_time": "2026-10-23T13:38:00+00:00",
+     "net_usd": -477.5,
+     "r": -1.038043
     }
    ]
   },
@@ -419,6 +767,84 @@
      "exit_time": "2026-10-23T12:41:00+00:00",
      "net_usd": 756.0,
      "r": 1.527273
+    }
+   ]
+  },
+  "overnight_breakout": {
+   "candidates": [
+    {
+     "candidate_id": "overnight_breakout:2026-10-19T14:20:00+00:00:long",
+     "entry": null,
+     "status": "taken",
+     "stop": 29736.5,
+     "tags": [],
+     "target": 30050.75
+    },
+    {
+     "candidate_id": "overnight_breakout:2026-10-20T13:45:00+00:00:short",
+     "entry": null,
+     "status": "taken",
+     "stop": 29516.5,
+     "tags": [],
+     "target": 29182.0
+    },
+    {
+     "candidate_id": "overnight_breakout:2026-10-22T14:25:00+00:00:short",
+     "entry": null,
+     "status": "taken",
+     "stop": 29519.25,
+     "tags": [],
+     "target": 29168.25
+    },
+    {
+     "candidate_id": "overnight_breakout:2026-10-23T14:55:00+00:00:long",
+     "entry": null,
+     "status": "taken",
+     "stop": 29166.0,
+     "tags": [],
+     "target": 29541.0
+    }
+   ],
+   "trades": [
+    {
+     "candidate_id": "overnight_breakout:2026-10-19T14:20:00+00:00:long",
+     "entry_price": 29840.75,
+     "entry_time": "2026-10-19T14:21:00+00:00",
+     "exit_price": 29735.75,
+     "exit_reason": "stop",
+     "exit_time": "2026-10-19T17:48:00+00:00",
+     "net_usd": -424.0,
+     "r": -1.016787
+    },
+    {
+     "candidate_id": "overnight_breakout:2026-10-20T13:45:00+00:00:short",
+     "entry_price": 29405.25,
+     "entry_time": "2026-10-20T13:46:00+00:00",
+     "exit_price": 29517.25,
+     "exit_reason": "stop",
+     "exit_time": "2026-10-20T13:50:00+00:00",
+     "net_usd": -452.0,
+     "r": -1.01573
+    },
+    {
+     "candidate_id": "overnight_breakout:2026-10-22T14:25:00+00:00:short",
+     "entry_price": 29402.25,
+     "entry_time": "2026-10-22T14:26:00+00:00",
+     "exit_price": 29168.25,
+     "exit_reason": "target",
+     "exit_time": "2026-10-22T16:50:00+00:00",
+     "net_usd": 932.0,
+     "r": 1.991453
+    },
+    {
+     "candidate_id": "overnight_breakout:2026-10-23T14:55:00+00:00:long",
+     "entry_price": 29291.0,
+     "entry_time": "2026-10-23T14:56:00+00:00",
+     "exit_price": 29165.25,
+     "exit_reason": "stop",
+     "exit_time": "2026-10-23T17:11:00+00:00",
+     "net_usd": -507.0,
+     "r": -1.014
     }
    ]
   }

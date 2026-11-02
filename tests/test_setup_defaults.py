@@ -16,7 +16,16 @@ from moon_ai.setups.base import REGISTRY
 D = load_setup_defaults()
 
 
-def test_the_five_setups_are_pre_registered_in_priority_order():
+ICT = {
+    "ny_am_silver_bullet",
+    "ny_pm_silver_bullet",
+    "london_sweep_and_reverse",
+    "ote_pullback",
+    "ict_2022_model",
+}
+
+
+def test_the_setups_are_pre_registered_in_priority_order():
     by_priority = sorted(D.values(), key=lambda d: d.params.priority)
     assert [d.name for d in by_priority] == [
         "ny_am_silver_bullet",
@@ -24,6 +33,12 @@ def test_the_five_setups_are_pre_registered_in_priority_order():
         "london_sweep_and_reverse",
         "ote_pullback",
         "ict_2022_model",
+        # Non-ICT batch 1 (#102), pre-registered 2026-11-02.
+        "orb_5m",
+        "noise_breakout",
+        "intraday_momentum",
+        "overnight_breakout",
+        "gap_fill",
     ]
 
 
@@ -33,9 +48,12 @@ def test_windows_and_time_outs_follow_the_design():
     assert (w["ny_am_silver_bullet"].start, w["ny_pm_silver_bullet"].start) == (time(10), time(14))
     assert w[D["ote_pullback"].params.window].start == time(8, 30)
     assert D["london_sweep_and_reverse"].params.timeout == time(9, 30)
-    assert {d.params.timeout for n, d in D.items() if n != "london_sweep_and_reverse"} == {
+    ict = {n: d for n, d in D.items() if n in ICT}
+    assert {d.params.timeout for n, d in ict.items() if n != "london_sweep_and_reverse"} == {
         time(15, 55)
     }
+    # Batch 1 is flat before the 16:00 flat-by rule; intraday momentum holds to 15:59.
+    assert all(d.params.timeout <= time(15, 59) for n, d in D.items() if n not in ICT)
 
 
 def test_ict_timestamp_changes_are_applied():

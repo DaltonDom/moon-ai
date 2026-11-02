@@ -115,6 +115,7 @@ def _parser() -> argparse.ArgumentParser:
         help="trading day after the last one, YYYY-MM-DD (exclusive)",
     )
     b.add_argument("--trial", help="a pre-registered rescue trial name (default: the default)")
+    b.add_argument("--setups", nargs="+", help="with --all: only these setups")
     b.add_argument("--config", type=Path, help="TOML config overriding the defaults")
     b.add_argument("--store", type=Path, help="local bar store root")
     b.add_argument("--runs", type=Path, default=Path("data/runs"), help="where runs are written")
@@ -627,12 +628,18 @@ def _backtest_round2(args: argparse.Namespace) -> int:
 def _backtest_all(args: argparse.Namespace) -> int:
     from moon_ai.backtest.protocol import WORDS, judge_all
     from moon_ai.backtest.runner import NewsCalendarMissing
+    from moon_ai.setups import load_setup_defaults
 
+    unknown = sorted(set(args.setups or []) - set(load_setup_defaults()))
+    if unknown:
+        print(f"refused: no setup {', '.join(unknown)}", file=sys.stderr)
+        return 2
     try:
         verdicts = judge_all(
             args.start,
             args.end,
             args.runs,
+            setups=args.setups,
             store_root=args.store,
             config=load_config(args.config),
             news=not args.no_news,

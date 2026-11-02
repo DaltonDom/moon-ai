@@ -53,6 +53,13 @@ def _default_windows() -> dict[str, Window]:
         "ny_pm_silver_bullet": _w("14:00", "15:00"),
         # Off by default: 90 minutes long and overlaps the 08:30 data release.
         "extra_silver_bullet": _w("07:00", "08:30"),
+        # Non-ICT batch 1 (#102): where each setup's decision bars close, so the
+        # random-entry baseline enters at comparable times.
+        "rth_first_hour": _w("09:31", "10:31"),
+        "rth_checkpoints": _w("10:00", "15:31"),
+        "last_half_hour": _w("15:30", "15:31"),
+        "rth_open_90": _w("09:35", "11:01"),
+        "rth_first_minute": _w("09:31", "09:32"),
     }
 
 
