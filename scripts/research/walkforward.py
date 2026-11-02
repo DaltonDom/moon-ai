@@ -40,7 +40,10 @@ from moon_ai.propfirm import Account, Rules, Trade, load_rules
 
 FIRST_TEST = date(2023, 11, 1)
 N_QUARTERS = 8
-RISKS = (100.0, 150.0, 200.0, 300.0, 400.0, 500.0)
+RISKS = (100.0, 150.0, 200.0, 300.0, 400.0, 500.0, 600.0, 750.0, 1000.0)
+BUFFER_FRACTIONS = (0.05, 0.075, 0.1, 0.15, 0.2)
+EVAL_RISKS = (400.0, 600.0, 750.0, 1000.0)
+FUNDED_RISKS = (100.0, 150.0, 200.0, 300.0, 400.0, 600.0)
 MIN_TRAIN_TRADES = 30
 MONTHLY_EVAL_BUDGET = 500.0
 TARGET_MONTHLY = 2000.0
@@ -133,7 +136,12 @@ def business(
         for t in sorted(trades, key=lambda t: t.exit or datetime.max):
             if acc.done_for_day(t.session):
                 break
-            n = acc.contracts(t, risk)
+            # risk >= 1: fixed USD per trade; risk < 1: that fraction of the room
+            # left above the drawdown floor (smaller near the floor, larger as
+            # profit builds the buffer).
+            r_ = risk if not isinstance(risk, tuple) else risk[0 if phase == "eval" else 1]
+            usd = r_ if r_ >= 1 else r_ * (acc.balance - acc.floor)
+            n = acc.contracts(t, usd)
             if n < 1:
                 continue
             traded = True
@@ -198,6 +206,12 @@ def business(
     return led
 
 
+def _risk_str(r) -> str:
+    if isinstance(r, tuple):
+        return f"eval ${r[0]:.0f}, funded ${r[1]:.0f}"
+    return f"${r:.0f}" if r >= 1 else f"{r:.3f} of buffer"
+
+
 def monthly(led: Ledger, months: list[tuple[int, int]]) -> list[float]:
     return [led.payouts.get(m, 0.0) - led.fees.get(m, 0.0) for m in months]
 
@@ -236,6 +250,18 @@ def main() -> int:
         default="MNQ,MES",
         help="comma-separated roots, e.g. MNQ,MES,M2K,MYM,MGC,MCL,M6E",
     )
+    ap.add_argument(
+        "--sizing",
+        choices=["fixed", "buffer", "both", "split"],
+        default="fixed",
+        help="risk per trade: fixed USD, a fraction of the drawdown buffer, or either",
+    )
+    ap.add_argument(
+        "--steady",
+        type=float,
+        default=0.0,
+        help="tune for mean monthly income minus this many standard deviations",
+    )
     ap.add_argument("--family", help="only variants whose name starts with this, e.g. time_mom")
     ap.add_argument("--fixed", help="trade exactly this variant name in every quarter")
     ap.add_argument(
@@ -246,6 +272,13 @@ def main() -> int:
     )
     args = ap.parse_args()
     plans = {k: v for k, v in load_rules().items() if v.eval_fee is not None}
+    global RISKS
+    RISKS = {
+        "fixed": RISKS,
+        "buffer": BUFFER_FRACTIONS,
+        "both": RISKS + BUFFER_FRACTIONS,
+        "split": tuple((e, f) for e in EVAL_RISKS for f in FUNDED_RISKS),
+    }[args.sizing]
     if args.daily_cap:
         from moon_ai.propfirm import with_daily_cap
 
@@ -264,7 +297,8 @@ def main() -> int:
     if args.family:
         cands = [c for c in cands if c.name.startswith(args.family)]
     if args.fixed:
-        cands = [c for c in cands if c.name == args.fixed]
+        names = args.fixed.split("|")
+        cands = [c for c in cands if c.name in names]
     print(f"{len(cands)} candidates (variant x market); plans: {', '.join(plans)}")
 
     oos: list[tuple[date, list[Trade], Rules | None, float]] = []
@@ -299,7 +333,11 @@ def main() -> int:
         for plan in plans.values():
             for risk in RISKS:
                 led = business(day_list(chosen, train_lo, test_lo, plan, risk))
-                net = sum(monthly(led, train_months)) / len(train_months)
+                months_net = monthly(led, train_months)
+                net = sum(months_net) / len(train_months)
+                if args.steady:
+                    # Reward steady months: mean minus `steady` x the spread.
+                    net -= args.steady * float(np.std(months_net))
                 if net > best_net:
                     best_plan, best_risk, best_net = plan, risk, net
         quarters.append((test_lo, test_hi, chosen, best_plan, best_risk, best_net, scored[:3]))
@@ -307,7 +345,8 @@ def main() -> int:
         names = "; ".join(f"{c.name} [{c.symbol[:3]}]" for c in chosen) or "none"
         plan_name = best_plan.name if best_plan else "sit out"
         print(
-            f"Q{q + 1} {test_lo}..{test_hi}: {plan_name} @ ${best_risk:.0f}/trade "
+            f"Q{q + 1} {test_lo}..{test_hi}: {plan_name} @ "
+            f"{_risk_str(best_risk)}/trade "
             f"(tuning-year net ${best_net:,.0f}/mo per account)\n    {names}"
         )
 

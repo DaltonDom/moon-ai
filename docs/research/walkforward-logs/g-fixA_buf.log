@@ -1,0 +1,51 @@
+warning: The `UV_NATIVE_TLS` environment variable is deprecated and will be removed in a future release. Use `UV_SYSTEM_CERTS` instead.
+2 candidates (variant x market); plans: lucidflex_50k, tradeify_growth_50k, tradeify_select_flex_50k, tradeify_select_daily_50k
+Q1 2023-11-01..2024-02-01: sit out @ 0.000 of buffer/trade (tuning-year net $0/mo per account)
+    time_mom m=60 th=0.25 k=0.25 t=2.0 [MNQ]; time_mom m=60 th=0.25 k=0.25 t=2.0 [MES]
+Q2 2024-02-01..2024-05-01: sit out @ 0.000 of buffer/trade (tuning-year net $0/mo per account)
+    time_mom m=60 th=0.25 k=0.25 t=2.0 [MNQ]; time_mom m=60 th=0.25 k=0.25 t=2.0 [MES]
+Q3 2024-05-01..2024-08-01: sit out @ 0.000 of buffer/trade (tuning-year net $0/mo per account)
+    time_mom m=60 th=0.25 k=0.25 t=2.0 [MNQ]; time_mom m=60 th=0.25 k=0.25 t=2.0 [MES]
+Q4 2024-08-01..2024-11-01: tradeify_select_flex_50k @ 0.200 of buffer/trade (tuning-year net $145/mo per account)
+    time_mom m=60 th=0.25 k=0.25 t=2.0 [MNQ]; time_mom m=60 th=0.25 k=0.25 t=2.0 [MES]
+Q5 2024-11-01..2025-02-01: sit out @ 0.000 of buffer/trade (tuning-year net $0/mo per account)
+    time_mom m=60 th=0.25 k=0.25 t=2.0 [MNQ]; time_mom m=60 th=0.25 k=0.25 t=2.0 [MES]
+Q6 2025-02-01..2025-05-01: sit out @ 0.000 of buffer/trade (tuning-year net $0/mo per account)
+    time_mom m=60 th=0.25 k=0.25 t=2.0 [MNQ]; time_mom m=60 th=0.25 k=0.25 t=2.0 [MES]
+Q7 2025-05-01..2025-08-01: sit out @ 0.000 of buffer/trade (tuning-year net $0/mo per account)
+    time_mom m=60 th=0.25 k=0.25 t=2.0 [MNQ]; time_mom m=60 th=0.25 k=0.25 t=2.0 [MES]
+Q8 2025-08-01..2025-11-01: sit out @ 0.000 of buffer/trade (tuning-year net $0/mo per account)
+    time_mom m=60 th=0.25 k=0.25 t=2.0 [MNQ]; time_mom m=60 th=0.25 k=0.25 t=2.0 [MES]
+
+untouched quarters, 3 copy-traded accounts:
+  month       net total   eval fees
+  2023-11            0           0
+  2023-12            0           0
+  2024-01            0           0
+  2024-02            0           0
+  2024-03            0           0
+  2024-04            0           0
+  2024-05            0           0
+  2024-06            0           0
+  2024-07            0           0
+  2024-08         -495         495
+  2024-09            0           0
+  2024-10            0           0
+  2024-11            0           0
+  2024-12            0           0
+  2025-01            0           0
+  2025-02            0           0
+  2025-03            0           0
+  2025-04            0           0
+  2025-05            0           0
+  2025-06            0           0
+  2025-07            0           0
+  2025-08            0           0
+  2025-09            0           0
+  2025-10            0           0
+  quarters: +0, +0, +0, -495, +0, +0, +0, +0
+  evaluations bought 1, passed 0, funded accounts blown 0 (per account slot)
+  ✕ average >= $2,000/month total (got $-21)
+  ✕ money made in >= 6 of 8 quarters (got 0)
+  ✓ eval spending <= $500 every month (max $495)
+verdict: not a winner
