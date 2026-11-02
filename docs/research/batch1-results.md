@@ -103,3 +103,26 @@ Plans with a daily loss limit blow far fewer accounts. LucidFlex has none.
 - **Bar:** unchanged and still on LucidFlex 50K. At some risk level, under 50% of funded accounts blown within a year and positive net a month. The other plans are reported but don't decide.
 - **If it passes:** the holdout look is the noise breakout default on MNQ and on MES, one run each, logged per market. Both must clear the check-3 rule.
 - **If it fails:** no holdout look. Next is round 2 with the paper's full rules (trailing stop, re-entry).
+
+## Check 1b result: combined MNQ + MES, our $1,000 daily cap, passed (narrowly)
+
+1,735 trades. LucidFlex 50K (the bar):
+
+| Risk per trade | Passed (within a year) | Days to pass | Payouts a month | Blown in a year | Fees per pass | Net a month |
+|---|---|---|---|---|---|---|
+| **$100** | 18% | 235 | $92 | **27%** | $725 | **+$75** |
+| $200 | 38% | 126 | $524 | 93% | $344 | +$448 |
+| $300 | 37% | 92 | $503 | 100% | $349 | +$317 |
+| $400 | 29% | 58 | $1,131 | 100% | $442 | +$931 |
+| $500 | 22% | 43 | $1,299 | 100% | $590 | +$914 |
+
+**Verdict: the pre-registered bar is met at $100,** with 27% blown and +$75 a month. The money is thin, though:
+- only 18% of evaluations pass, and they take about 8 months
+- each funded account costs about $725 in fees
+- each funded account then nets about $75 a month
+
+Larger sizes earn more after fees but blow nearly every account. That's a "buy evaluations, take payouts, blow, repeat" pattern. It is outside the bar and is fragile: the result is sensitive to unverified rules, to the edge persisting, and to firms' tolerance. It isn't the plan.
+
+The other plans with our cap at $200: LucidPro blows 51%, Tradeify Growth 54% (+$221 a month), and Select Daily 59% (+$351 a month).
+
+**What happens next, as pre-registered:** the holdout look, one run each on MNQ and MES. Separately, round 2 (the paper's trailing stop and re-entry) aims to make the economics worth it.
