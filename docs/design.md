@@ -12,6 +12,9 @@ Agreed in a second grilling session after round 1 retired four of five ICT setup
 
 - **Success metric.** Strategies are scored by replaying them through the target prop firm's exact rules (trailing drawdown, daily loss limit, consistency rule, payout schedule). The headline numbers are the % of evaluations passed, the median days to pass, payouts per month while funded, and the closest approach to the drawdown limit. Raw 7-year profit is secondary.
 - **Firm rules simulated.** Lucid Trading 50k first, Tradeify as the second rule set. Rules are checked against first-party pages and recorded with their dates.
+  - The rules live in `config/prop_firms.toml`, with sources in [prop-firm-rules-2026-11.md](research/prop-firm-rules-2026-11.md).
+  - `moon-ai propfirm RUN_FOLDER` replays a run, and every report card shows the LucidFlex 50K replay.
+  - **Method:** an evaluation is started on every trading day. Trades are re-sized to a fixed dollar risk in whole micros. Drawdown and daily limits are checked against each trade's worst open loss. Each pass becomes a funded account, followed for up to a year.
 - **Any strategy family.** ICT is one hypothesis family among several: trend continuation, opening-range breakout, overnight high/low and gap behaviour, intraday momentum and mean reversion. Every family uses the same pre-registration and go-forward bar.
 - **ICT faithfulness check.** A time-boxed audit of the 2022 model and NY AM Silver Bullet against the course material, plus about 20 hand-labelled days. If fixing them doesn't produce an edge, ICT is retired.
 - **Instruments.** MNQ and MES, intraday only, flat before the close.

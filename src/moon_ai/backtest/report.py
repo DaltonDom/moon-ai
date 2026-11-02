@@ -230,6 +230,7 @@ def render(
 <section class="card"><h2>Account growth</h2>
 <p class="sub">Each trade risks {_usd(risk_usd, False)} (1R). The red band shows dips below the last high.</p>
 {_chart(trades)}</section>
+{_propfirm_card(folder)}
 <section class="card"><h2>Ideas it didn't trade</h2><ul>{skip_rows or "<li>none</li>"}</ul></section>
 <section class="card"><h2>Trades, newest first</h2><div class="scroll"><table>
 <tr><th>Entry (New York)</th><th>Side</th><th class=n>Entry</th><th class=n>Exit</th>
@@ -251,6 +252,42 @@ def render(
     out = folder / "report.html"
     out.write_text(page)
     return out
+
+
+PROP_FIRM = "lucidflex_50k"
+PROP_RISKS = (200.0, 300.0, 400.0)
+
+
+def _propfirm_card(folder: Path) -> str:
+    """The run replayed through the main prop firm's rules (design.md, Revision 2026-11-02)."""
+    from moon_ai.propfirm import load_rules, score, trades_from_run
+
+    firms = load_rules()
+    if PROP_FIRM not in firms:
+        return ""
+    rules = firms[PROP_FIRM]
+    trades = trades_from_run(folder)
+    if not trades:
+        return ""
+
+    def money(x: float | None) -> str:
+        return "–" if x is None else _usd(x)
+
+    rows = "".join(
+        f"<tr><td class=n>{_usd(s.risk_usd, False)}</td><td class=n>{s.pass_rate:.0%}</td>"
+        f"<td class=n>{'–' if s.median_days_to_pass is None else f'{s.median_days_to_pass:.0f}'}"
+        f"</td><td class=n>{_usd(s.payout_per_month, False)}</td>"
+        f"<td class=n>{s.funded_failed_rate:.0%}</td><td class=n>{money(s.net_per_month)}</td></tr>"
+        for s in score(trades, rules, PROP_RISKS)
+    )
+    return f"""<section class="card"><h2>Prop-firm replay: {html.escape(rules.title)}</h2>
+<p class="sub">An evaluation started on every trading day, each pass carried into a funded
+account for up to a year. Rules: {html.escape(rules.source)}.</p>
+<div class="scroll"><table><tr><th class=n>Risk per trade</th><th class=n>Evaluations passed</th>
+<th class=n>Days to pass</th><th class=n>Payouts a month</th><th class=n>Blown within a year</th>
+<th class=n>Net a month</th></tr>{rows}</table></div>
+<p class="sub">Payouts a month is your share while funded. Net a month subtracts the evaluation
+fees needed to replace blown accounts.</p></section>"""
 
 
 CSS = """
