@@ -53,6 +53,19 @@ def _default_windows() -> dict[str, Window]:
         "ny_pm_silver_bullet": _w("14:00", "15:00"),
         # Off by default: 90 minutes long and overlaps the 08:30 data release.
         "extra_silver_bullet": _w("07:00", "08:30"),
+        # Non-ICT batch 1 (#102): where each setup's decision bars close, so the
+        # random-entry baseline enters at comparable times.
+        "rth_first_hour": _w("09:31", "10:31"),
+        "rth_checkpoints": _w("10:00", "15:31"),
+        "last_half_hour": _w("15:30", "15:31"),
+        "rth_open_90": _w("09:35", "11:01"),
+        "rth_first_minute": _w("09:31", "09:32"),
+        # Batch 2:
+        "rth_midday": _w("10:30", "14:01"),
+        "rth_reversion": _w("10:30", "15:01"),
+        # Batch 3 (overnight; the trading day runs 18:00 to 17:00):
+        "globex_reopen": _w("18:01", "18:02"),
+        "euro_open": _w("02:00", "02:01"),
     }
 
 
@@ -169,6 +182,13 @@ def _default_instruments() -> dict[str, InstrumentSpec]:
         "MES": InstrumentSpec(tick_size=0.25, point_value=5.0),
         "NQ": InstrumentSpec(tick_size=0.25, point_value=20.0),
         "ES": InstrumentSpec(tick_size=0.25, point_value=50.0),
+        # Other CME micros (contract specs from CME), added 2026-11-02 for the
+        # multi-market search:
+        "M2K": InstrumentSpec(tick_size=0.1, point_value=5.0),  # Micro Russell 2000
+        "MYM": InstrumentSpec(tick_size=1.0, point_value=0.5),  # Micro Dow
+        "MGC": InstrumentSpec(tick_size=0.1, point_value=10.0),  # Micro Gold
+        "MCL": InstrumentSpec(tick_size=0.01, point_value=100.0),  # Micro WTI Crude
+        "M6E": InstrumentSpec(tick_size=0.0001, point_value=12_500.0),  # Micro EUR/USD
     }
 
 

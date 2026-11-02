@@ -88,6 +88,7 @@ class Trader:
         self.risk = RiskBook(self.config.risk)
         self._ict: IctConfig = self.config.ict
         self._priority = {s.name: s.params.priority for s in self.setups}
+        self._by_name = {s.name: s for s in self.setups}
         self._plans: dict[str, _Plan] = {}  # by broker order id
         self._last_now: datetime | None = None
 
@@ -113,6 +114,7 @@ class Trader:
         self._track_excursions(bar)
         self._housekeeping(ctx, now)
         cands = [c for s in self.setups for c in s.scan(ctx)]
+        self._manage(ctx, now)
         for cand in self._dedupe(cands):
             self._consider(cand, ctx, now)
         self._last_now = now
@@ -151,6 +153,25 @@ class Trader:
                 plan.exiting = True
                 plan.exit_reason = "timeout" if now >= plan.cand.timeout else "flat_by"
                 self._plans[exit_id] = plan
+
+    def _manage(self, ctx: Context, now: datetime) -> None:
+        """A setup with an exit rule may close its open trade at this bar's close
+        (e.g. the noise breakout's boundary/VWAP check). The bracket stays as the
+        safety stop until the exit fills at the next bar's open."""
+        for oid, plan in list(self._plans.items()):
+            if plan.entry_fill is None or plan.exiting or oid != plan.order_id:
+                continue
+            setup = self._by_name.get(plan.cand.setup)
+            manage = getattr(setup, "manage", None)
+            if manage is None or not manage(plan.cand, ctx):
+                continue
+            side = Side.SELL if plan.cand.side == "long" else Side.BUY
+            order = Order(plan.cand.symbol, side, plan.qty, tag=f"exit:{plan.cid}")
+            exit_id = ctx.broker.submit(order)
+            self.journal.add_order(exit_id, order, now, plan.cid)
+            plan.exiting = True
+            plan.exit_reason = "rule_exit"
+            self._plans[exit_id] = plan
 
     # --- step 2: dedupe ------------------------------------------------------------
 

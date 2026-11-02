@@ -1,0 +1,13 @@
+warning: The `UV_NATIVE_TLS` environment variable is deprecated and will be removed in a future release. Use `UV_SYSTEM_CERTS` instead.
+menu: 42 versions x 4 plans x 7 risks; steady=1.0
+Q1 2023-11-01: sit out
+Q2 2024-02-01: sit out
+Q3 2024-05-01: sit out
+Q4 2024-08-01: sit out
+Q5 2024-11-01: sit out
+Q6 2025-02-01: gap_agree t=2.0 | lucidflex_50k $700 (tuning score 173)
+Q7 2025-05-01: breadthMES t=3.0 +equity | lucidflex_50k $700 (tuning score 769)
+Q8 2025-08-01: breadthMES t=3.0 +equity | lucidflex_50k $600 (tuning score 47)
+untouched: $144/mo, 1/8 | +0 +0 +0 +0 +0 +4620 -780 -390
+evals 5 passed 2 blown 2
+verdict: not a winner

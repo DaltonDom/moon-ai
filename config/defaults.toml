@@ -256,3 +256,257 @@ news_day_filter = true
   [[setups.ict_2022_model.round2]]
   name = "timeframe_5m"
   timeframe = 5
+
+# ---------------------------------------------------------------------------
+# Non-ICT batch 1, pre-registered 2026-11-02 before any backtest (#102;
+# design.md, "Revision 2026-11-02"; code in src/moon_ai/setups/intraday.py).
+# Each fires at most once a day, enters at market, and is flat by its
+# time-out, so they trade often enough for prop-firm payout rules. Research
+# runs stop at 2025-11-01 (the locked holdout). Each also has to pass the
+# prop-firm bar agreed for #102: in the LucidFlex 50K replay, under 50% of
+# funded accounts blown within a year and positive net a month at some risk.
+
+[setups.orb_5m]
+title = "Opening-range breakout (5 min)"
+priority = 6
+# Zarattini & Aziz (2023): the first 5-minute candle's direction, entered at
+# 09:35, stop at the range's other side, held to the close.
+window = "rth_first_hour"
+timeout = "15:55"
+
+  [[setups.orb_5m.rescue]]
+  name = "stop_atr_0.1"  # their later version: stop at 10% of the daily ATR
+  stop_atr = 0.1
+  [[setups.orb_5m.rescue]]
+  name = "target_2r"
+  target_r = 2.0
+  [[setups.orb_5m.rescue]]
+  name = "range_15m"
+  or_minutes = 15
+  [[setups.orb_5m.rescue]]
+  name = "min_stop_40"  # skip ranges under 10 points, where costs dominate
+  min_stop_ticks = 40
+
+[setups.noise_breakout]
+title = "Noise-area breakout"
+priority = 7
+# Zarattini, Aziz & Barbon (2024): trade only outside the 14-day average
+# intraday move from the open, checked every 30 minutes from 10:00; stop at
+# the area's anchor, held to the close.
+window = "rth_checkpoints"
+timeout = "15:55"
+
+  [[setups.noise_breakout.rescue]]
+  name = "stop_atr_0.25"
+  stop_atr = 0.25
+  [[setups.noise_breakout.rescue]]
+  name = "target_2r"
+  target_r = 2.0
+  [[setups.noise_breakout.rescue]]
+  name = "checkpoint_60"
+  checkpoint_minutes = 60
+
+  # Round 2, registered 2026-11-02 after the default failed the holdout
+  # (docs/research/batch1-results.md). Not new ideas: the paper's own rules,
+  # which the default simplified. Listed in order; the first to pass stops it.
+  [[setups.noise_breakout.round2]]
+  name = "paper_rules"  # exit back inside max(boundary, VWAP) at checkpoints, and re-enter
+  noise_variant = "paper"
+  [[setups.noise_breakout.round2]]
+  name = "paper_exit"  # the exit rule alone, one trade a day
+  exit_rule = "boundary_vwap"
+
+[setups.intraday_momentum]
+title = "Intraday momentum (last half hour)"
+priority = 8
+# Gao, Han, Li & Zhou (2018): the return from the previous close to 10:00
+# sets the direction of a trade from 15:30 to the close.
+window = "last_half_hour"
+timeout = "15:59"
+stop_atr = 0.1
+
+  [[setups.intraday_momentum.rescue]]
+  name = "min_move_0.25"  # only after a first half hour of at least 0.25 ATR
+  min_move_atr = 0.25
+  [[setups.intraday_momentum.rescue]]
+  name = "stop_atr_0.25"
+  stop_atr = 0.25
+
+[setups.overnight_breakout]
+title = "Overnight-range breakout"
+priority = 9
+# The first 5-minute mark (09:35-11:00) that closes beyond the overnight high
+# or low; stop 0.25 daily ATR, target 2R.
+window = "rth_open_90"
+timeout = "15:55"
+stop_atr = 0.25
+target_r = 2.0
+
+  [[setups.overnight_breakout.rescue]]
+  name = "target_4r"
+  target_r = 4.0
+  [[setups.overnight_breakout.rescue]]
+  name = "stop_atr_0.15"
+  stop_atr = 0.15
+
+[setups.gap_fill]
+title = "Opening-gap fill"
+priority = 10
+# Mean reversion: a gap of 0.1-0.75 daily ATR from the previous close is faded
+# at 09:31 toward that close; stop one gap beyond the entry.
+window = "rth_first_minute"
+timeout = "15:55"
+gap_min_atr = 0.1
+gap_max_atr = 0.75
+gap_stop_mult = 1.0
+
+  [[setups.gap_fill.rescue]]
+  name = "stop_half_gap"
+  gap_stop_mult = 0.5
+  [[setups.gap_fill.rescue]]
+  name = "gap_max_0.4"
+  gap_max_atr = 0.4
+
+# ---------------------------------------------------------------------------
+# Non-ICT batch 2, pre-registered 2026-11-02 before any backtest, after batch
+# 1's only pass (noise_breakout) failed the holdout (docs/research/
+# batch1-results.md). Same bar as batch 1, including the prop-firm bar and the
+# MES confirmation; research data only (to 2025-11-01).
+
+[setups.orb_high_vol]
+title = "Opening-range breakout, volatile markets only"
+priority = 11
+# orb_5m's rules (it came closest in batch 1: DSR 0.92), traded only when the
+# 14-day ATR is above its 100-day median: momentum is reported to be stronger
+# in volatile markets (Zarattini & Aziz 2023 report this for the ORB itself).
+window = "rth_first_hour"
+timeout = "15:55"
+vol_regime = "high"
+
+  [[setups.orb_high_vol.rescue]]
+  name = "stop_atr_0.1"
+  stop_atr = 0.1
+
+[setups.vwap_pullback]
+title = "Trend-day pullback to VWAP"
+priority = 12
+# Once the day has moved 0.5 ATR from the open with VWAP on that side, take
+# the first 10:30-14:00 bar that touches VWAP and closes back with the trend;
+# stop 0.25 ATR beyond VWAP, target 2R.
+window = "rth_midday"
+timeout = "15:55"
+stop_atr = 0.25
+target_r = 2.0
+trend_min_atr = 0.5
+
+  [[setups.vwap_pullback.rescue]]
+  name = "target_4r"
+  target_r = 4.0
+  [[setups.vwap_pullback.rescue]]
+  name = "trend_0.75"
+  trend_min_atr = 0.75
+
+[setups.vwap_reversion]
+title = "VWAP reversion, quiet markets only"
+priority = 13
+# Only when the 14-day ATR is below its 100-day median: from 10:30 to 15:00,
+# fade a close 0.35 ATR or more from VWAP back to VWAP; stop the same distance
+# beyond the entry.
+window = "rth_reversion"
+timeout = "15:55"
+vol_regime = "low"
+vwap_dev_atr = 0.35
+dev_stop_mult = 1.0
+
+  [[setups.vwap_reversion.rescue]]
+  name = "dev_0.5"
+  vwap_dev_atr = 0.5
+  [[setups.vwap_reversion.rescue]]
+  name = "any_regime"
+  vol_regime = "any"
+
+[setups.turn_of_month]
+title = "Turn of the month"
+priority = 14
+# Long the cash session (09:31 to 15:55) on the last weekday of the month and
+# the first three of the next (Lakonishok & Smidt 1988; McConnell & Xu 2008);
+# stop 0.5 ATR.
+window = "rth_first_minute"
+timeout = "15:55"
+stop_atr = 0.5
+tom_days_before = 1
+tom_days_after = 3
+
+  [[setups.turn_of_month.rescue]]
+  name = "stop_atr_1.0"
+  stop_atr = 1.0
+
+# ---------------------------------------------------------------------------
+# Batch 3: overnight drift, pre-registered 2026-11-02 before any backtest.
+# Entry and exit are inside one CME trading day (18:00 to 17:00 New York),
+# and the firms only require being flat by 16:45 (docs/research/
+# prop-firm-rules-2026-11.md; to be confirmed in writing with the firm).
+#
+# A different first test for these time-of-day effects, fixed now: the
+# random-entry baseline is uninformative when the entry is one fixed minute
+# (random entries in that minute are the strategy itself). In its place, using
+# scripts/research/time_effect_check.py:
+#   1. mean net R per trade > 0, with a session-bootstrap 95% CI above 0;
+#   2. DSR > 0.95 and at least 100 trades (as before);
+#   3. still profitable with double slippage (as before);
+#   4. net positive in 2022, the bear year, so it isn't only market beta.
+# Then the same MES check, prop-firm bar and one holdout look as batch 1.
+
+[setups.overnight_hold]
+title = "Overnight hold (18:01 to 09:29)"
+priority = 15
+window = "globex_reopen"
+entry_time = "18:01"
+timeout = "09:29"
+stop_atr = 1.0
+
+  [[setups.overnight_hold.rescue]]
+  name = "stop_atr_0.5"
+  stop_atr = 0.5
+
+[setups.overnight_after_down]
+title = "Overnight hold after a down cash session"
+priority = 16
+window = "globex_reopen"
+entry_time = "18:01"
+timeout = "09:29"
+stop_atr = 1.0
+after_down = true
+
+  [[setups.overnight_after_down.rescue]]
+  name = "stop_atr_0.5"
+  stop_atr = 0.5
+
+[setups.euro_open_drift]
+title = "European-open drift (02:00 to 03:30)"
+priority = 17
+window = "euro_open"
+entry_time = "02:00"
+timeout = "03:30"
+stop_atr = 0.25
+
+  [[setups.euro_open_drift.rescue]]
+  name = "after_down"
+  after_down = true
+  [[setups.euro_open_drift.rescue]]
+  name = "stop_atr_0.5"
+  stop_atr = 0.5
+
+# ---------------------------------------------------------------------------
+# Batch 4: a momentum portfolio, pre-registered 2026-11-02 before any
+# portfolio result. No new setup: the members are existing defaults, fixed
+# here, run together as one account on MNQ and MES:
+#   orb_5m, overnight_breakout, noise_breakout, vwap_pullback
+# They are the non-ICT setups that trade WITH the move and whose research edge
+# point estimate was positive. Chosen after seeing research results, so the
+# luck test (scripts/research/portfolio_check.py) counts all 94 versions
+# tested so far. Bar: that script's five checks; then the prop-firm bar
+# (LucidFlex 50K, our $1,000 daily cap, the overlap-aware replay); then one
+# holdout look per member and market (noise_breakout's were spent in batch 1:
+# its existing holdout runs are reused, not re-run), passing if the pooled
+# net R and mean R are above 0.

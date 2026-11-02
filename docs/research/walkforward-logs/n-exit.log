@@ -1,0 +1,23 @@
+warning: The `UV_NATIVE_TLS` environment variable is deprecated and will be removed in a future release. Use `UV_SYSTEM_CERTS` instead.
+== exit-time momentum (menu 24, steady 0.0)
+  Q1: breadthMES exit 13:00 t=2.0 [MNQ] tradeify_select_daily_50k $800
+  Q2: none exit 13:00 t=2.0 [MNQ] lucidflex_50k $800
+  Q3: none exit 12:00 t=None [MNQ] lucidflex_50k $800
+  Q4: breadthMES exit 13:00 t=2.0 [MNQ] tradeify_select_daily_50k $700
+  Q5: breadthMES exit 14:00 t=None [MNQ] tradeify_select_daily_50k $500
+  Q6: breadthMES exit 14:00 t=None [MNQ] lucidflex_50k $500
+  Q7: breadthMES exit 14:00 t=None [MNQ] lucidflex_50k $700
+  Q8: breadthMES exit 14:00 t=None [MNQ] lucidflex_50k $800
+  untouched: $99/mo, 2/8 | -1485 -1170 -1170 +8168 -495 +469 -1170 -780 | evals 17 passed 4
+  verdict: not a winner
+== exit-time momentum (menu 24, steady 0.5)
+  Q1: breadthMES exit 15:55 t=2.0 [MNQ] tradeify_select_daily_50k $800
+  Q2: breadthMES exit 15:55 t=2.0 [MNQ] lucidflex_50k $700
+  Q3: sit out
+  Q4: none exit 13:00 t=2.0 [MNQ] tradeify_growth_50k $800
+  Q5: breadth3 exit 13:00 t=2.0 [MNQ] tradeify_select_daily_50k $800
+  Q6: breadthMES exit 13:00 t=None [MNQ] lucidflex_50k $700
+  Q7: breadthMES exit 14:00 t=None [MNQ] lucidflex_50k $700
+  Q8: breadthMES exit 14:00 t=None [MNQ] lucidflex_50k $800
+  untouched: $-92/mo, 1/8 | -1485 -1170 +0 +3180 +0 -780 -1170 -780 | evals 15 passed 6
+  verdict: not a winner

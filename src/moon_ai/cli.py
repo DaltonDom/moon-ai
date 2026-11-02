@@ -115,6 +115,10 @@ def _parser() -> argparse.ArgumentParser:
         help="trading day after the last one, YYYY-MM-DD (exclusive)",
     )
     b.add_argument("--trial", help="a pre-registered rescue trial name (default: the default)")
+    b.add_argument("--setups", nargs="+", help="with --all: only these setups")
+    b.add_argument(
+        "--symbol", default="MNQ.v.0", help="one setup only: the market (default MNQ.v.0)"
+    )
     b.add_argument("--config", type=Path, help="TOML config overriding the defaults")
     b.add_argument("--store", type=Path, help="local bar store root")
     b.add_argument("--runs", type=Path, default=Path("data/runs"), help="where runs are written")
@@ -132,19 +136,6 @@ def _parser() -> argparse.ArgumentParser:
         help="run without the news blackout (results will be optimistic)",
     )
 
-    st = sub.add_parser("study", help="quick checks of the mentor's timing and bias claims")
-    st.add_argument("names", nargs="*", help="studies to run (default: all)")
-    st.add_argument("--from", dest="start", type=date.fromisoformat, default=date(2019, 6, 1))
-    st.add_argument(
-        "--to",
-        dest="end",
-        type=date.fromisoformat,
-        default=date(2026, 4, 30),
-        help="exclusive; the default keeps the last 6 months out (the holdout)",
-    )
-    st.add_argument("--config", type=Path, help="TOML config overriding the defaults")
-    st.add_argument("--store", type=Path, help="local bar store root")
-
     dg = sub.add_parser("diagnose", help="why a setup's backtest won or lost (research only)")
     dg.add_argument("setup", help="e.g. ote_pullback")
     dg.add_argument("--trial", default="default", help="which tested version (default: default)")
@@ -161,7 +152,64 @@ def _parser() -> argparse.ArgumentParser:
     fn.add_argument("--trial", help="a pre-registered rescue trial name")
     fn.add_argument("--config", type=Path, help="TOML config overriding the defaults")
     fn.add_argument("--store", type=Path, help="local bar store root")
+    pf = sub.add_parser(
+        "propfirm", help="replay a backtest run through a prop firm's rules: pass rate, payouts"
+    )
+    pf.add_argument(
+        "run", type=Path, nargs="+", help="run folder(s); double-slippage re-runs are skipped"
+    )
+    pf.add_argument("--firm", action="append", help="rule set name (default: every firm)")
+    pf.add_argument(
+        "--risk",
+        type=float,
+        nargs="+",
+        default=[100, 200, 300, 400, 500],
+        help="USD risked per trade (default: 100 200 300 400 500)",
+    )
+    pf.add_argument(
+        "--combine", action="store_true", help="replay all the runs together as one account"
+    )
+    pf.add_argument(
+        "--daily-cap", type=float, help="our own soft daily loss cap in USD, inside the firm's"
+    )
+    pf.add_argument("--config", type=Path, help="TOML config overriding the defaults")
     return p
+
+
+def _propfirm(args: argparse.Namespace) -> int:
+    from moon_ai.propfirm import lines, load_rules, score, trades_from_run
+
+    firms = load_rules()
+    if args.daily_cap is not None:
+        from moon_ai.propfirm import with_daily_cap
+
+        firms = {k: with_daily_cap(v, args.daily_cap) for k, v in firms.items()}
+    names = args.firm or list(firms)
+    unknown = [n for n in names if n not in firms]
+    if unknown:
+        print(
+            f"refused: no rule set {', '.join(unknown)}; have {', '.join(firms)}", file=sys.stderr
+        )
+        return 2
+    from moon_ai.journal import decode_json, read_run
+    from moon_ai.propfirm import combine
+
+    groups = []
+    for run in args.run:
+        if not (run / "run.json").exists():
+            print(f"refused: {run} is not a backtest run folder", file=sys.stderr)
+            return 2
+        notes = decode_json(read_run(run, "runs"), "runs")[0]["notes"] or {}
+        if not notes.get("stress"):
+            groups.append((run.name, trades_from_run(run, load_config(args.config))))
+    if args.combine:
+        groups = [(" + ".join(n for n, _ in groups), combine(*(t for _, t in groups)))]
+    for name, trades in groups:
+        print(f"{name}: {len(trades)} trades")
+        for n in names:
+            print()
+            print("\n".join(lines(score(trades, firms[n], tuple(args.risk)), firms[n])))
+    return 0
 
 
 def load_env_file(path: Path | None = None) -> None:
@@ -185,8 +233,8 @@ def main(
         return _backtest(args)
     if args.command == "funnel":
         return _funnel(args)
-    if args.command == "study":
-        return _study(args)
+    if args.command == "propfirm":
+        return _propfirm(args)
     if args.command == "diagnose":
         from moon_ai.backtest.diagnose import diagnose
 
@@ -466,6 +514,7 @@ def _backtest(args: argparse.Namespace) -> int:
                 args.start,
                 args.end,
                 ledger=args.runs.parent / "holdout_checks.jsonl",
+                symbol=args.symbol,
             )
         else:
             guard(args.start, args.end)
@@ -490,6 +539,7 @@ def _backtest(args: argparse.Namespace) -> int:
             runs_root=args.runs,
             config=load_config(args.config),
             news=not args.no_news,
+            symbol=args.symbol,
         )
     except (NewsCalendarMissing, KeyError, ValueError) as exc:
         print(f"refused: {exc}", file=sys.stderr)
@@ -520,6 +570,7 @@ def _backtest(args: argparse.Namespace) -> int:
             runs_root=args.runs,
             config=load_config(args.config),
             news=not args.no_news,
+            symbol=args.symbol,
         )
         print(
             f"double-slippage re-run: {'still profitable' if stress.net_r > 0 else 'loses money'}"
@@ -532,28 +583,6 @@ def _backtest(args: argparse.Namespace) -> int:
         import webbrowser
 
         webbrowser.open(page.resolve().as_uri())
-    return 0
-
-
-def _study(args: argparse.Namespace) -> int:
-    from moon_ai.research.studies import STUDIES, load
-
-    names = args.names or list(STUDIES)
-    unknown = [n for n in names if n not in STUDIES]
-    if unknown:
-        print(f"unknown studies {unknown}; known: {', '.join(STUDIES)}", file=sys.stderr)
-        return 2
-    config = load_config(args.config)
-    df = load(
-        args.store or config.data.store_root, "MNQ.v.0", args.start, args.end, config.data.dataset
-    )
-    if df.height == 0:
-        print("no bars found; run `moon-ai download` first", file=sys.stderr)
-        return 2
-    print(f"MNQ {args.start} to {args.end} (exclusive), {df['tday'].n_unique()} trading days\n")
-    for n in names:
-        print(f"[{n}]")
-        print("\n".join(STUDIES[n](df)), end="\n\n", flush=True)
     return 0
 
 
@@ -610,6 +639,7 @@ def _backtest_round2(args: argparse.Namespace) -> int:
             args.start,
             args.end,
             args.runs,
+            setups=args.setups,
             store_root=args.store,
             config=load_config(args.config),
             news=not args.no_news,
@@ -627,12 +657,18 @@ def _backtest_round2(args: argparse.Namespace) -> int:
 def _backtest_all(args: argparse.Namespace) -> int:
     from moon_ai.backtest.protocol import WORDS, judge_all
     from moon_ai.backtest.runner import NewsCalendarMissing
+    from moon_ai.setups import load_setup_defaults
 
+    unknown = sorted(set(args.setups or []) - set(load_setup_defaults()))
+    if unknown:
+        print(f"refused: no setup {', '.join(unknown)}", file=sys.stderr)
+        return 2
     try:
         verdicts = judge_all(
             args.start,
             args.end,
             args.runs,
+            setups=args.setups,
             store_root=args.store,
             config=load_config(args.config),
             news=not args.no_news,

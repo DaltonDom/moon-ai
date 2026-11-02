@@ -1,0 +1,13 @@
+warning: The `UV_NATIVE_TLS` environment variable is deprecated and will be removed in a future release. Use `UV_SYSTEM_CERTS` instead.
+menu: 42 versions x 4 plans x 7 risks; steady=0.5
+Q1 2023-11-01: breadthMES t=2.0 | tradeify_select_daily_50k $800 (tuning score 167)
+Q2 2024-02-01: breadthMES t=2.0 | lucidflex_50k $700 (tuning score 150)
+Q3 2024-05-01: gap_disagree t=1.5 | lucidflex_50k $400 (tuning score 9)
+Q4 2024-08-01: range_hi t=2.0 | lucidflex_50k $600 (tuning score 153)
+Q5 2024-11-01: breadth3 t=2.0 | lucidflex_50k $700 (tuning score 232)
+Q6 2025-02-01: breadthMES t=3.0 | tradeify_select_flex_50k $800 (tuning score 841)
+Q7 2025-05-01: breadthMES t=3.0 | tradeify_select_flex_50k $800 (tuning score 1,640)
+Q8 2025-08-01: breadthMES t=1.5 | tradeify_growth_50k $800 (tuning score 601)
+untouched: $-211/mo, 2/8 | -1485 -1170 -780 +1417 +1231 -1485 -1485 -1305
+evals 21 passed 6 blown 6
+verdict: not a winner

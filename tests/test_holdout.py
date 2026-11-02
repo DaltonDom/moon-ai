@@ -69,3 +69,11 @@ def test_cli_refuses_research_on_the_holdout(argv, tmp_path, capsys):
     runs = ["--runs", str(tmp_path / "runs")] if argv[0] == "backtest" else []
     assert main([*argv, *runs]) == 2
     assert "refused" in capsys.readouterr().err
+
+
+def test_one_look_per_market(tmp_path):
+    ledger = tmp_path / "holdout_checks.jsonl"
+    sign_off("noise_breakout", "default", HOLDOUT_START, HOLDOUT_END, ledger)
+    sign_off("noise_breakout", "default", HOLDOUT_START, HOLDOUT_END, ledger, symbol="MES.v.0")
+    with pytest.raises(HoldoutLocked, match=r"on MES\.v\.0 already"):
+        sign_off("noise_breakout", "default", HOLDOUT_START, HOLDOUT_END, ledger, symbol="MES.v.0")

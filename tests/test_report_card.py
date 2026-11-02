@@ -39,6 +39,7 @@ def test_report_card_says_it_plainly(tmp_path):
     assert "Run without the news blackout" in page
     assert page.count("<tr><td>2026-07-") == 10  # one row per trade
     assert "<svg" in page and "Advanced numbers" in page
+    assert "Prop-firm replay: LucidFlex 50K" in page and "Blown within a year" in page
 
 
 def test_warnings(tmp_path):
