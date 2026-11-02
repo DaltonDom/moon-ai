@@ -1,0 +1,51 @@
+warning: The `UV_NATIVE_TLS` environment variable is deprecated and will be removed in a future release. Use `UV_SYSTEM_CERTS` instead.
+1204 candidates (variant x market); plans: lucidflex_50k, tradeify_growth_50k, tradeify_select_flex_50k, tradeify_select_daily_50k
+Q1 2023-11-01..2024-02-01: tradeify_select_daily_50k @ $200/trade (tuning-year net $284/mo per account)
+    time_mom m=60 th=0.25 k=1.0 t=None [MNQ]; time_mom m=60 th=0.25 k=1.0 t=None [MES]; time_mom m=60 th=0.0 k=1.0 t=None [M2K]; time_mom m=15 th=0.25 k=0.25 t=2.0 [MYM]; gap_go th=0.5 k=0.25 t=None [MGC]; time_mom m=120 th=0.5 k=0.5 t=2.0 [MCL]; time_mom m=120 th=0.5 k=0.5 t=None [M6E]
+Q2 2024-02-01..2024-05-01: lucidflex_50k @ $300/trade (tuning-year net $610/mo per account)
+    time_mom m=60 th=0.0 k=1.0 t=None [MNQ]; time_mom m=60 th=0.25 k=1.0 t=None [MES]; time_mom m=60 th=0.0 k=1.0 t=None [M2K]; time_mom m=60 th=0.0 k=1.0 t=None [MYM]; range_exp first=60 sq=0.5 k=0.25 t=2.0 [MGC]; time_mom m=30 th=0.0 k=0.5 t=2.0 [MCL]; time_mom m=120 th=0.5 k=0.5 t=None [M6E]
+Q3 2024-05-01..2024-08-01: lucidflex_50k @ $300/trade (tuning-year net $1,401/mo per account)
+    time_mom m=30 th=0.25 k=0.25 t=None [MNQ]; on_break k=1.0 cut=60 t=None [MES]; range_exp first=60 sq=0.5 k=0.5 t=None [M2K]; gap_go th=0.5 k=0.25 t=2.0 [MYM]; prev_trend th=0.5 k=0.5 follow=True [MGC]; time_mom m=30 th=0.0 k=0.5 t=2.0 [MCL]; time_mom m=30 th=0.25 k=0.25 t=None [M6E]
+Q4 2024-08-01..2024-11-01: tradeify_select_daily_50k @ $300/trade (tuning-year net $1,054/mo per account)
+    time_mom m=15 th=0.25 k=0.25 t=None [MNQ]; time_mom m=30 th=0.25 k=0.5 t=2.0 [MES]; prev_trend th=0.5 k=1.0 follow=True [M2K]; range_exp first=30 sq=0.3 k=0.5 t=None [MYM]; pdh_pdl k=1.0 cut=60 t=None [MGC]; time_mom m=30 th=0.0 k=1.0 t=None [MCL]; time_mom m=30 th=0.25 k=0.25 t=None [M6E]
+Q5 2024-11-01..2025-02-01: tradeify_select_daily_50k @ $300/trade (tuning-year net $1,144/mo per account)
+    range_exp first=30 sq=0.5 k=0.25 t=2.0 [MNQ]; time_mom m=30 th=0.25 k=0.25 t=2.0 [MES]; time_mom m=60 th=0.5 k=0.5 t=None [M2K]; gap_go th=0.25 k=1.0 t=None [MYM]; gap_go th=0.1 k=1.0 t=None [MGC]; range_exp first=60 sq=0.3 k=0.25 t=2.0 [MCL]; prev_trend th=0.5 k=0.5 follow=False [M6E]
+Q6 2025-02-01..2025-05-01: tradeify_growth_50k @ $300/trade (tuning-year net $1,101/mo per account)
+    time_mom m=120 th=0.25 k=0.25 t=2.0 [MNQ]; time_mom m=60 th=0.0 k=0.25 t=2.0 [MES]; prev_trend th=0.5 k=1.0 follow=True [M2K]; time_mom m=120 th=0.5 k=0.25 t=2.0 [MYM]; pdh_pdl k=1.0 cut=60 t=None [MGC]; prev_trend th=0.5 k=1.0 follow=False [MCL]; prev_trend th=0.5 k=1.0 follow=False [M6E]
+Q7 2025-05-01..2025-08-01: lucidflex_50k @ $300/trade (tuning-year net $1,134/mo per account)
+    time_mom m=60 th=0.0 k=0.25 t=2.0 [MNQ]; time_mom m=60 th=0.0 k=0.25 t=2.0 [MES]; time_mom m=30 th=0.25 k=0.5 t=None [M2K]; range_exp first=60 sq=0.5 k=0.25 t=2.0 [MYM]; pdh_pdl k=1.0 cut=60 t=None [MGC]; prev_trend th=0.5 k=1.0 follow=False [MCL]
+Q8 2025-08-01..2025-11-01: tradeify_select_daily_50k @ $300/trade (tuning-year net $1,145/mo per account)
+    time_mom m=15 th=0.0 k=1.0 t=None [MNQ]; time_mom m=60 th=0.0 k=0.25 t=2.0 [MES]; time_mom m=30 th=0.25 k=1.0 t=2.0 [M2K]; prev_trend th=0.5 k=0.25 follow=False [MYM]; gap_go th=0.1 k=1.0 t=None [MGC]; prev_trend th=0.5 k=1.0 follow=False [MCL]
+
+untouched quarters, 3 copy-traded accounts:
+  month       net total   eval fees
+  2023-11         -495         495
+  2023-12         -495         495
+  2024-01            0           0
+  2024-02         -390         390
+  2024-03         -390         390
+  2024-04         -390         390
+  2024-05         -390         390
+  2024-06         -390         390
+  2024-07         -390         390
+  2024-08            0           0
+  2024-09            0           0
+  2024-10         -495         495
+  2024-11         -495         495
+  2024-12         -495         495
+  2025-01         -495         495
+  2025-02            0           0
+  2025-03         -435         435
+  2025-04            0           0
+  2025-05         -390         390
+  2025-06         -390         390
+  2025-07         -390         390
+  2025-08         -495         495
+  2025-09            0           0
+  2025-10         -495         495
+  quarters: -990, -1,170, -1,170, -495, -1,485, -435, -1,170, -990
+  evaluations bought 18, passed 2, funded accounts blown 2 (per account slot)
+  ✕ average >= $2,000/month total (got $-329)
+  ✕ money made in >= 6 of 8 quarters (got 0)
+  ✓ eval spending <= $500 every month (max $495)
+verdict: not a winner

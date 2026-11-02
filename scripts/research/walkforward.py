@@ -104,9 +104,11 @@ class Ledger:
 
 def business(
     days: list[tuple[date, list[Trade], Rules | None, float]],
+    budget: float = math.inf,
 ) -> Ledger:
     """One account slot over consecutive days; each day carries its trades and the
-    plan and risk in force. A new evaluation is bought on the plan in force that day."""
+    plan and risk in force. A new evaluation is bought on the plan in force that day,
+    unless it would take this slot's evaluation spending this month over `budget`."""
     led = Ledger(defaultdict(float), defaultdict(float))
     acc: Account | None = None
     rules: Rules | None = None
@@ -119,6 +121,8 @@ def business(
         if phase == "none":
             if plan is None or not trades:
                 continue
+            if led.fees[(d.year, d.month)] + (plan.eval_fee or 0.0) > budget + 1e-9:
+                continue  # this month's evaluation budget is spent
             rules, phase, first_day = plan, "eval", d
             acc = Account(rules.evaluation)
             led.evals += 1
@@ -227,13 +231,25 @@ def main() -> int:
         help="rank variants by Sharpe, or by business income in the tuning year",
     )
     ap.add_argument("--prefilter", type=int, default=40, help="business: Sharpe pre-filter")
+    ap.add_argument(
+        "--markets",
+        default="MNQ,MES",
+        help="comma-separated roots, e.g. MNQ,MES,M2K,MYM,MGC,MCL,M6E",
+    )
+    ap.add_argument(
+        "--per-market",
+        type=int,
+        default=0,
+        help="instead of a global top N, keep the best N variants of each market",
+    )
     args = ap.parse_args()
     plans = {k: v for k, v in load_rules().items() if v.eval_fee is not None}
     if args.daily_cap:
         from moon_ai.propfirm import with_daily_cap
 
         plans = {k: with_daily_cap(v, args.daily_cap) for k, v in plans.items()}
-    markets = [screen.load("MNQ.v.0"), screen.load("MES.v.0")]
+    roots = args.markets.split(",")
+    markets = [screen.load(f"{r}.v.0", min_bars=380 if r in ("MNQ", "MES") else 250) for r in roots]
     cands: list[Candidate] = []
     for name, (fn, params), tr in screen.variants():
         for mk in markets:
@@ -253,6 +269,11 @@ def main() -> int:
         train_lo = add_months(test_lo, -12)
         scored = sorted(((score(c, train_lo, test_lo), c) for c in cands), key=lambda x: -x[0][0])
         chosen = [c for (s, n, m), c in scored if s > 0 and m > 0][: args.top]
+        if args.per_market:
+            chosen = []
+            for mk in markets:
+                mine = [c for (s, n, m), c in scored if c.symbol == mk.symbol and s > 0 and m > 0]
+                chosen += mine[: args.per_market]
         train_months = months_between(train_lo, test_lo)
         if args.objective == "business":
             pool = [c for (s, n, m), c in scored if s > 0 and m > 0][: args.prefilter]
@@ -282,7 +303,7 @@ def main() -> int:
             f"(tuning-year net ${best_net:,.0f}/mo per account)\n    {names}"
         )
 
-    led = business(oos)
+    led = business(oos, MONTHLY_EVAL_BUDGET / args.accounts)
     months = months_between(FIRST_TEST, add_months(FIRST_TEST, 3 * N_QUARTERS))
     per_acct = monthly(led, months)
     total = [x * args.accounts for x in per_acct]

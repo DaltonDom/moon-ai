@@ -64,7 +64,7 @@ class Market:
     point_value: float
 
 
-def load(symbol: str) -> Market:
+def load(symbol: str, min_bars: int = 380) -> Market:
     files = sorted((STORE / symbol).glob("*.parquet"))
     df = pl.concat([pl.read_parquet(f) for f in files]).unique("ts_event").sort("ts_event")
     df = df.with_columns(pl.col("ts_event").dt.convert_time_zone("America/New_York").alias("ny"))
@@ -88,8 +88,8 @@ def load(symbol: str) -> Market:
     on_map = {r[0]: (r[1], r[2]) for r in on_hl.iter_rows()}
     days, opens, highs, lows, closes, inst = [], [], [], [], [], []
     for (d,), g in rth.group_by(["tday"], maintain_order=True):
-        if g.height < 380:
-            continue  # half days and broken sessions
+        if g.height < min_bars:
+            continue  # half days and broken sessions (thin markets skip quiet minutes)
         idx = g["m"].to_numpy()
         arr = {}
         for col in ("open", "high", "low", "close"):
