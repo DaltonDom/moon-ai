@@ -496,3 +496,17 @@ stop_atr = 0.25
   [[setups.euro_open_drift.rescue]]
   name = "stop_atr_0.5"
   stop_atr = 0.5
+
+# ---------------------------------------------------------------------------
+# Batch 4: a momentum portfolio, pre-registered 2026-11-02 before any
+# portfolio result. No new setup: the members are existing defaults, fixed
+# here, run together as one account on MNQ and MES:
+#   orb_5m, overnight_breakout, noise_breakout, vwap_pullback
+# They are the non-ICT setups that trade WITH the move and whose research edge
+# point estimate was positive. Chosen after seeing research results, so the
+# luck test (scripts/research/portfolio_check.py) counts all 94 versions
+# tested so far. Bar: that script's five checks; then the prop-firm bar
+# (LucidFlex 50K, our $1,000 daily cap, the overlap-aware replay); then one
+# holdout look per member and market (noise_breakout's were spent in batch 1:
+# its existing holdout runs are reused, not re-run), passing if the pooled
+# net R and mean R are above 0.

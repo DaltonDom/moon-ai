@@ -54,6 +54,7 @@ class Trade:
     worst: float  # worst open P&L, <= 0
     best: float = 0.0  # best open P&L, >= 0
     exit: datetime | None = None  # orders trades when runs are combined
+    entry: datetime | None = None  # with `exit`, finds trades open at the same time
 
 
 def trades_from_run(folder: Path, config: Config | None = None) -> list[Trade]:
@@ -81,6 +82,7 @@ def trades_from_run(folder: Path, config: Config | None = None) -> list[Trade]:
                 worst=min((t["mae_r"] or 0.0) * risk, 0.0, t["net_usd"] / n),
                 best=max((t["mfe_r"] or 0.0) * risk, 0.0, t["net_usd"] / n),
                 exit=t["exit_time"],
+                entry=t["entry_time"],
             )
         )
     return out
@@ -189,6 +191,8 @@ class Account:
     days: list[date] = field(default_factory=list)
     day_pnl: dict[date, float] = field(default_factory=dict)
     size_cap: int = 0  # micros allowed today (scaling plan)
+    # Today's earlier trades: (exit time, how much worse than its result it got, in USD).
+    _open: list[tuple[datetime | None, float]] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         self.floor = -self.phase.max_loss
@@ -224,11 +228,20 @@ class Account:
         """Book one trade of `n` contracts. Returns why the account failed, if it did."""
         if not self.days or self.days[-1] != t.session:
             self.days.append(t.session)
+            self._open = []
         day = self.day_pnl.get(t.session, 0.0)
         if self.phase.drawdown == "intraday_trailing":
             self._raise_floor(self.balance + t.best * n)
         before = self.balance
-        worst = before + t.worst * n
+        # Trades still open when this one opened may be at their worst at the same
+        # moment (pessimistic): their already-booked results get that much worse.
+        overlap = sum(
+            extra
+            for ex, extra in self._open
+            if ex is not None and t.entry is not None and ex > t.entry
+        )
+        self._open.append((t.exit, (t.worst - t.pnl) * n))
+        worst = before + t.worst * n + overlap
         self.min_buffer = min(self.min_buffer, worst - self.floor)
         if worst <= self.floor:
             self.balance = self.floor
@@ -236,7 +249,7 @@ class Account:
             return "max loss"
         pnl = t.pnl * n
         limit = self.phase.daily_loss
-        if limit is not None and day + t.worst * n <= -limit:
+        if limit is not None and day + t.worst * n + overlap <= -limit:
             if self.phase.daily_loss_hard:
                 self.balance += -limit - day
                 self.day_pnl[t.session] = -limit

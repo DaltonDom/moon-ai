@@ -230,3 +230,28 @@ def test_our_daily_cap_sits_inside_the_firms():
     assert r.evaluation.daily_loss == 1000 and not r.evaluation.daily_loss_hard
     strict = Rules(**{**rules().__dict__, "funded": Phase(2000, "static", daily_loss=800)})
     assert with_daily_cap(strict, 1000).funded.daily_loss == 800  # the firm's is tighter
+
+
+def test_trades_open_at_the_same_time_add_their_open_losses():
+    from datetime import UTC, datetime
+
+    def at(h0, h1, pnl, worst):
+        return Trade(
+            day(0),
+            pnl,
+            50.0,
+            worst,
+            max(pnl, 0.0),
+            exit=datetime(2024, 1, 2, h1, tzinfo=UTC),
+            entry=datetime(2024, 1, 2, h0, tzinfo=UTC),
+        )
+
+    # Two trades, each 600 under at worst; the first ends +100.
+    first, second = at(14, 16, 100.0, -600.0), at(15, 17, 0.0, -600.0)
+    acc = Account(Phase(max_loss=1000, drawdown="static"))
+    assert acc.take(first, 1) is None
+    assert acc.take(second, 1) == "max loss"  # +100 -700 (first at its worst) -600
+    apart = at(16, 17, 0.0, -600.0)  # opens after the first closed: no overlap
+    acc2 = Account(Phase(max_loss=1000, drawdown="static"))
+    acc2.take(first, 1)
+    assert acc2.take(apart, 1) is None
