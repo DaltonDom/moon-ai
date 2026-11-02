@@ -386,7 +386,7 @@ class Summary:
     median_days_to_pass: float | None  # calendar days
     fail_reasons: dict[str, int]
     payout_per_month: float  # trader's share, averaged over all funded time
-    funded_failed_rate: float  # funded accounts that blew within a year
+    funded_failed_rate: float | None  # blew within a year; None if no funded account to judge
     median_payouts_before_fail: float | None
     cost_per_funded: float | None  # evaluation fees spent per pass, on average
     # Payouts minus the evaluation fees needed to replace blown accounts, per funded month.
@@ -414,7 +414,7 @@ def summarise(attempts: list[Attempt], rules: Rules, risk_usd: float) -> Summary
         median_days_to_pass=statistics.median(to_pass) if to_pass else None,
         fail_reasons=dict(Counter(a.reason for a in ended if a.outcome == "failed")),
         payout_per_month=paid / months if months else 0.0,
-        funded_failed_rate=len(blown) / len(judged) if judged else 0.0,
+        funded_failed_rate=len(blown) / len(judged) if judged else None,
         median_payouts_before_fail=(
             statistics.median(len(a.payouts) for a in blown) if blown else None
         ),
@@ -444,9 +444,10 @@ def lines(summaries: list[Summary], rules: Rules) -> list[str]:
         days = f"{s.median_days_to_pass:.0f}" if s.median_days_to_pass is not None else "—"
         fee = f"${s.cost_per_funded:,.0f}" if s.cost_per_funded is not None else "—"
         net = _usd(s.net_per_month) if s.net_per_month is not None else "—"
+        blown = "—" if s.funded_failed_rate is None else f"{s.funded_failed_rate:.0%}"
         out.append(
             f"  {'$' + format(s.risk_usd, ',.0f'):>10}  {s.pass_rate:>7.0%}  {days:>12}  "
-            f"{'$' + format(s.payout_per_month, ',.0f'):>12}  {s.funded_failed_rate:>12.0%}  "
+            f"{'$' + format(s.payout_per_month, ',.0f'):>12}  {blown:>12}  "
             f"{fee:>13}  {net:>10}"
         )
     out += [

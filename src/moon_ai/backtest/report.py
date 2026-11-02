@@ -277,7 +277,8 @@ def _propfirm_card(folder: Path) -> str:
         f"<tr><td class=n>{_usd(s.risk_usd, False)}</td><td class=n>{s.pass_rate:.0%}</td>"
         f"<td class=n>{'–' if s.median_days_to_pass is None else f'{s.median_days_to_pass:.0f}'}"
         f"</td><td class=n>{_usd(s.payout_per_month, False)}</td>"
-        f"<td class=n>{s.funded_failed_rate:.0%}</td><td class=n>{money(s.net_per_month)}</td></tr>"
+        f"<td class=n>{'–' if s.funded_failed_rate is None else f'{s.funded_failed_rate:.0%}'}"
+        f"</td><td class=n>{money(s.net_per_month)}</td></tr>"
         for s in score(trades, rules, PROP_RISKS)
     )
     return f"""<section class="card"><h2>Prop-firm replay: {html.escape(rules.title)}</h2>
