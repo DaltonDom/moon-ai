@@ -64,7 +64,11 @@ class Market:
     point_value: float
 
 
-def load(symbol: str, min_bars: int = 380) -> Market:
+def load(
+    symbol: str, min_bars: int = 380, start: date = START, end: date = HOLDOUT_START
+) -> Market:
+    """Research data only by default (`end` = the locked holdout's start). Only
+    the one-look holdout check passes a later `end`."""
     files = sorted((STORE / symbol).glob("*.parquet"))
     df = pl.concat([pl.read_parquet(f) for f in files]).unique("ts_event").sort("ts_event")
     df = df.with_columns(pl.col("ts_event").dt.convert_time_zone("America/New_York").alias("ny"))
@@ -79,7 +83,7 @@ def load(symbol: str, min_bars: int = 380) -> Market:
             - 570
         ).alias("m"),
     )
-    df = df.filter(pl.col("tday") >= START, pl.col("tday") < HOLDOUT_START)
+    df = df.filter(pl.col("tday") >= start, pl.col("tday") < end)
     cfg = load_config()
     spec = cfg.instrument(symbol)
     rth = df.filter((pl.col("m") >= 0) & (pl.col("m") < RTH_MIN))
