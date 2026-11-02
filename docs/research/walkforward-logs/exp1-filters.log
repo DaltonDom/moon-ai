@@ -1,0 +1,11 @@
+baseline (m60 th0 k.25 t2)                       trades  1555 mean +0.112R | $ 1,079/mo, 4/8 qtrs | -1485 -1170 -1170 +11917 +1995 +13691 -1485 +3615
+breakeven at +1R                                 trades  1555 mean +0.088R | $   907/mo, 2/8 qtrs | -1170 -1170 -1170 +20711 -1485 -1485 -1485 +9015
+breadth: MES, M2K, MYM agree                     trades   439 mean +0.208R | $ 1,726/mo, 6/8 qtrs | -1305 -495 +3748 +7869 +3025 +4620 +10305 +13666
+breadth: MES agrees                              trades  1273 mean +0.130R | $   404/mo, 3/8 qtrs | -1485 -1485 +962 +15810 +161 -1485 -1485 -1305
+gap agrees                                       trades   758 mean +0.171R | $   -51/mo, 1/8 qtrs | -1305 +0 +0 -780 -780 +4620 -1485 -1485
+gap disagrees                                    trades   796 mean +0.056R | $    98/mo, 3/8 qtrs | -1170 -1170 -495 -495 -495 +25 +981 +5180
+first-hour range > 0.4 ATR                       trades  1029 mean +0.162R | $  -261/mo, 1/8 qtrs | -1485 -1485 -1485 +2625 -1485 -780 -1170 -990
+first-hour range < 0.4 ATR                       trades   526 mean +0.015R | $   467/mo, 1/8 qtrs | -1170 -990 +0 +0 +0 +16333 -1485 -1485
+breadth all + breakeven                          trades   439 mean +0.173R | $   674/mo, 3/8 qtrs | -990 -1485 +2201 +17734 -1485 -1485 -1485 +3180
+target 3R                                        trades  1555 mean +0.124R | $ 1,720/mo, 3/8 qtrs | -1485 -1485 -1485 +43200 -390 +1392 -1305 +2830
+target 1.5R                                      trades  1555 mean +0.083R | $ 1,779/mo, 5/8 qtrs | -1170 -1170 +3993 +2745 -1170 +22870 +15765 +827

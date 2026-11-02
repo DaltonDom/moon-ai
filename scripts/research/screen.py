@@ -398,8 +398,12 @@ def simulate_detail(
     stop_dist: np.ndarray,
     target_r: float | None = None,
     exit_idx: int = TIMEOUT_IDX,
+    be_r: float | None = None,
 ) -> Detail:
-    """`simulate`, keeping each trade's dollars and open-P&L extremes for the prop replay."""
+    """`simulate`, keeping each trade's dollars and open-P&L extremes for the prop replay.
+
+    `be_r`: once a bar's high (long) reaches entry + be_r x risk, the stop moves
+    to the entry price from the next bar on (breakeven)."""
     b = load_config().broker
     tick, pv = mk.tick, mk.point_value
     e_slip, s_slip = b.entry_slippage_ticks * tick, b.stop_slippage_ticks * tick
@@ -417,6 +421,7 @@ def simulate_detail(
         tgt = px + s * target_r * dist if target_r else None
         exit_px, j_exit = None, exit_idx + 1
         lo_seen, hi_seen = px, px
+        moved = False
         for j in range(e, exit_idx + 1):
             o, hi, lo = mk.o[i, j], mk.h[i, j], mk.lo[i, j]
             if s > 0:
@@ -446,6 +451,10 @@ def simulate_detail(
                     lo_seen = min(lo_seen, tgt)
                     break
             lo_seen, hi_seen = min(lo_seen, lo), max(hi_seen, hi)
+            if be_r and not moved:
+                fav = (hi - px) if s > 0 else (px - lo)
+                if fav >= be_r * dist:
+                    stop, moved = px, True  # breakeven from the next bar
         if exit_px is None:
             nxt = min(exit_idx + 1, RTH_MIN - 1)
             exit_px = mk.o[i, nxt] - s * e_slip
