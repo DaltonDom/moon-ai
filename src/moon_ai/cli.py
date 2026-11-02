@@ -116,6 +116,9 @@ def _parser() -> argparse.ArgumentParser:
     )
     b.add_argument("--trial", help="a pre-registered rescue trial name (default: the default)")
     b.add_argument("--setups", nargs="+", help="with --all: only these setups")
+    b.add_argument(
+        "--symbol", default="MNQ.v.0", help="one setup only: the market (default MNQ.v.0)"
+    )
     b.add_argument("--config", type=Path, help="TOML config overriding the defaults")
     b.add_argument("--store", type=Path, help="local bar store root")
     b.add_argument("--runs", type=Path, default=Path("data/runs"), help="where runs are written")
@@ -513,6 +516,7 @@ def _backtest(args: argparse.Namespace) -> int:
             runs_root=args.runs,
             config=load_config(args.config),
             news=not args.no_news,
+            symbol=args.symbol,
         )
     except (NewsCalendarMissing, KeyError, ValueError) as exc:
         print(f"refused: {exc}", file=sys.stderr)
@@ -543,6 +547,7 @@ def _backtest(args: argparse.Namespace) -> int:
             runs_root=args.runs,
             config=load_config(args.config),
             news=not args.no_news,
+            symbol=args.symbol,
         )
         print(
             f"double-slippage re-run: {'still profitable' if stress.net_r > 0 else 'loses money'}"
