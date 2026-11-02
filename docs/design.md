@@ -6,6 +6,35 @@ Status: agreed in grilling session, 2026-10-31; revised 2026-11-02 (see [Revisio
 
 An autonomous, self-improving trading bot for CME micro futures that passes a prop-firm evaluation and then takes steady monthly payouts. Every strategy is proven on historical data, then on paper, before any money goes in. The maximum loss is the evaluation fee.
 
+## Revision 2026-11-02b: the business goal and walk-forward search (supersedes conflicting text)
+
+Agreed in a third grilling session, after about 100 strategy versions were judged against an academic-style bar, and after a screen of 172 more.
+
+- **Goal.** About $2,000 a month in total, from a fully autonomous bot on 25k or 50k prop accounts.
+  - The bot behaves the same way every month.
+  - It is copy-traded onto **at most 3 accounts**.
+  - Blown accounts are replaced as a cost of business, within **$500 a month** of evaluation spending.
+- **Search.** Any strategy type on MNQ and MES, with free tuning, judged by **walk-forward** over Nov 2022 – Oct 2025.
+  - Tune on 12 months, trade the next 3 months untouched, roll forward by 3 months. That gives 8 untouched quarters.
+  - No step ever sees data from after the period it is judged on.
+  - Firm, plan, account size and risk per trade are chosen in the tuning windows too.
+  - No data purchases are needed for now.
+- **A winner** meets all three, across the 8 untouched quarters:
+  - **average total income of $2k a month or more, after evaluation fees, across at most 3 accounts**
+  - **money made in at least 6 of the 8 quarters**
+  - **evaluation spending never above $500 in a month**
+- **Then:**
+  1. Confirm on Nov 2025 – Oct 2026 (on the Mac).
+  2. Run one real evaluation account (worst case: the fee).
+  3. Scale to 3 accounts after the first payout.
+- **Self-improvement.**
+  - **Monthly proposal.** Each month the bot re-tunes on the last 12 months and proposes the new settings on the dashboard.
+  - **Evidence required.** Each proposal comes with hard numbers: old vs new on the same untouched stretch, trade counts, the range of outcomes and the worst losing stretch.
+  - **Approval.** The user approves. Without approval, the current settings stay.
+  - **Safety stops.** The daily cap and the auto-pause act on their own.
+  - **Review.** Trade reviews and a weekly report are there for the user.
+  - **Dashboard pages** are built once a winner exists.
+
 ## Revision 2026-11-02: any edge, scored by prop-firm survival
 
 Agreed in a second grilling session after round 1 retired four of five ICT setups (see [why-losing.md](research/why-losing.md)). Where this section conflicts with older text below, this section wins.
