@@ -1,0 +1,23 @@
+warning: The `UV_NATIVE_TLS` environment variable is deprecated and will be removed in a future release. Use `UV_SYSTEM_CERTS` instead.
+== volume-climax reversal (menu 16, steady 0.0)
+  Q1: climax x2.0 k=0.25 t=1.0 [MNQ] lucidflex_50k $700
+  Q2: climax x2.0 k=0.25 t=1.0 [MNQ] tradeify_growth_50k $700
+  Q3: climax x2.0 k=0.25 t=1.0 [MNQ] tradeify_select_daily_50k $700
+  Q4: sit out
+  Q5: sit out
+  Q6: sit out
+  Q7: climax x2.0 k=0.25 t=2.0 [MES] lucidflex_50k $800
+  Q8: climax x2.0 k=0.25 t=2.0 [MES] lucidflex_50k $800
+  untouched: $-120/mo, 0/8 | -390 -435 -495 +0 +0 +0 -780 -780 | evals 7 passed 0
+  verdict: not a winner
+== volume-climax reversal (menu 16, steady 0.5)
+  Q1: sit out
+  Q2: sit out
+  Q3: sit out
+  Q4: sit out
+  Q5: sit out
+  Q6: sit out
+  Q7: sit out
+  Q8: sit out
+  untouched: $0/mo, 0/8 | +0 +0 +0 +0 +0 +0 +0 +0 | evals 0 passed 0
+  verdict: not a winner

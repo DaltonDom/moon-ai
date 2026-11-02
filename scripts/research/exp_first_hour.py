@@ -276,11 +276,122 @@ def honest_wf(steady: float = 0.5) -> int:
     return 0
 
 
+def honest_menu(menu: list[wf.Candidate], steady: float, label: str) -> float:
+    """Honest walk-forward over any menu: each quarter picks (version, plan, risk)
+    from the 12 months before it; returns the untouched average a month (3 accts)."""
+    plans = {k: with_daily_cap(v, 1000) for k, v in load_rules().items() if v.eval_fee}
+    risks = (200.0, 300.0, 400.0, 500.0, 600.0, 700.0, 800.0)
+    oos = []
+    picks = []
+    for q in range(wf.N_QUARTERS):
+        lo = wf.add_months(wf.FIRST_TEST, 3 * q)
+        hi = wf.add_months(lo, 3)
+        tr = wf.add_months(lo, -12)
+        months = wf.months_between(tr, lo)
+        best = (0.0, None, None, 0.0)
+        for c in menu:
+            if not np.any(~np.isnan(c.detail.r)):
+                continue
+            for plan in plans.values():
+                for risk in risks:
+                    net_m = wf.monthly(wf.business(wf.day_list([c], tr, lo, plan, risk)), months)
+                    v = sum(net_m) / len(months) - steady * float(np.std(net_m))
+                    if v > best[0]:
+                        best = (v, c, plan, risk)
+        _, c, plan, risk = best
+        picks.append(
+            "sit out" if c is None else f"{c.name} [{c.symbol[:3]}] {plan.name} ${risk:.0f}"
+        )
+        oos += wf.day_list([c] if c else [], lo, hi, plan, risk)
+    led = wf.business(oos, wf.MONTHLY_EVAL_BUDGET / 3)
+    months = wf.months_between(wf.FIRST_TEST, wf.add_months(wf.FIRST_TEST, 24))
+    total = [x * 3 for x in wf.monthly(led, months)]
+    qn = [sum(total[3 * q : 3 * q + 3]) for q in range(8)]
+    avg = sum(total) / 24
+    print(f"== {label} (menu {len(menu)}, steady {steady})")
+    for q, pk in enumerate(picks, 1):
+        print(f"  Q{q}: {pk}")
+    print(
+        f"  untouched: ${avg:,.0f}/mo, {sum(x > 0 for x in qn)}/8 | "
+        f"{' '.join(f'{x:+.0f}' for x in qn)} | evals {led.evals} passed {led.passes}"
+    )
+    ok = avg >= 2000 and sum(x > 0 for x in qn) >= 6
+    print(f"  verdict: {'MEETS THE BAR (honest)' if ok else 'not a winner'}", flush=True)
+    return avg
+
+
+def exit_time_menu() -> list[wf.Candidate]:
+    """(1) First-hour momentum with earlier exits."""
+    mnq = screen.load("MNQ.v.0")
+    mes, m2k, mym = (
+        screen.load(f"{r}.v.0", 380 if r == "MES" else 250) for r in ("MES", "M2K", "MYM")
+    )
+    n, m = len(mnq.days), 60
+    base = np.sign(first_hour(mnq, m))
+    sides = {
+        "none": base,
+        "breadthMES": np.where(agree_count(mnq, [mes], m) >= 1, base, 0),
+        "breadth3": np.where(agree_count(mnq, [mes, m2k, mym], m) >= 3, base, 0),
+    }
+    menu = []
+    for fname, side in sides.items():
+        for ex_name, ex_idx in (("12:00", 150), ("13:00", 210), ("14:00", 270), ("15:55", 385)):
+            for tgt in (None, 2.0):
+                det = screen.simulate_detail(
+                    mnq, side, np.full(n, m), 0.25 * mnq.atr, tgt, exit_idx=ex_idx
+                )
+                menu.append(
+                    wf.Candidate(f"{fname} exit {ex_name} t={tgt}", mnq.symbol, det, mnq.days)
+                )
+    return menu
+
+
+def climax_menu() -> list[wf.Candidate]:
+    """(2) Volume-climax reversal: fade the first 5-minute block (10:00-15:00) whose
+    volume is > `mult` x its 20-day same-slot average and range > 0.3 ATR."""
+    menu = []
+    for sym in ("MNQ.v.0", "MES.v.0"):
+        mk = screen.load(sym)
+        n = len(mk.days)
+        blocks = mk.v.reshape(n, -1, 5).sum(2)  # (days, 78) 5-minute volumes
+        hi5 = mk.h.reshape(n, -1, 5).max(2)
+        lo5 = mk.lo.reshape(n, -1, 5).min(2)
+        mv5 = mk.c.reshape(n, -1, 5)[:, :, -1] - mk.o.reshape(n, -1, 5)[:, :, 0]
+        avg = np.full_like(blocks, np.nan, dtype=float)
+        for i in range(20, n):
+            avg[i] = blocks[i - 20 : i].mean(0)
+        for mult in (2.0, 3.0):
+            side = np.zeros(n)
+            entry = np.zeros(n, int)
+            for i in range(20, n):
+                for b in range(6, 66):  # blocks starting 10:00 .. 14:55
+                    a = avg[i, b]
+                    if a and blocks[i, b] > mult * a and (hi5[i, b] - lo5[i, b]) > 0.3 * mk.atr[i]:
+                        side[i] = -np.sign(mv5[i, b])
+                        entry[i] = 5 * b + 5
+                        break
+            for k in (0.25, 0.5):
+                for tgt in (1.0, 2.0):
+                    det = screen.simulate_detail(mk, side, entry, k * mk.atr, tgt)
+                    menu.append(
+                        wf.Candidate(f"climax x{mult} k={k} t={tgt}", mk.symbol, det, mk.days)
+                    )
+    return menu
+
+
 if __name__ == "__main__":
     if "--breadth" in sys.argv:
         sys.exit(breadth_grid())
     if "--fixed-business" in sys.argv:
         sys.exit(fixed_business())
+    if "--exit-time" in sys.argv:
+        for st in (0.0, 0.5):
+            honest_menu(exit_time_menu(), st, "exit-time momentum")
+        sys.exit(0)
+    if "--climax" in sys.argv:
+        for st in (0.0, 0.5):
+            honest_menu(climax_menu(), st, "volume-climax reversal")
+        sys.exit(0)
     if "--honest" in sys.argv:
         st = float(sys.argv[sys.argv.index("--honest") + 1]) if len(sys.argv) > 2 else 0.5
         sys.exit(honest_wf(st))

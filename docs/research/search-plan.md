@@ -53,3 +53,22 @@
 - The volume filters were never chosen.
 - breadth3 was chosen in only 1 quarter. This confirms that the earlier breadth "winner" was a hindsight pick.
 - **Conclusion:** with all choices made honestly, the first-hour family makes about $0–200 a month. It doesn't reach the bar.
+
+## New idea classes, honest walk-forward (2026-11-02)
+
+| Idea | Average a month (3 accounts) | Profitable quarters |
+|---|---|---|
+| First-hour momentum with earlier exits (12:00, 13:00, 14:00), 24 versions | +$99 (steady 0) / −$92 (steady 0.5) | 2 / 1 of 8 |
+| Volume-climax reversal on MNQ and MES, 16 versions | −$120 / $0 (sat out) | 0 of 8 |
+| All 172 screen variants on MNQ, MES, M2K and MYM, global top 3 | −$388 / −$286 | 0 of 8 |
+
+Logs are in `walkforward-logs/n-*.log`.
+
+## Status after about 300 rule variants, ML, 7 markets and all the honest walk-forwards
+
+No strategy built from 1-minute price and volume bars reaches the bar under honest testing. The honest results cluster around −$400 to +$200 a month. Everything that looked better had a hindsight choice in it, and the two that were checked on the newest year both lost there.
+
+**What could change this is new information, not more rule variants:**
+- **Order-flow data** (Databento `mbp-1` or `tbbo`): the bid/ask, trade aggressor, and order-book imbalance. It needs a priced purchase and the user's OK.
+- **Longer history** (NQ/ES 2010–2019): it would let an edge be proven over more market regimes. The user declined it earlier.
+- **Forward testing:** one live evaluation, worst case the fee.
