@@ -126,6 +126,19 @@ def _parser() -> argparse.ArgumentParser:
         help="run without the news blackout (results will be optimistic)",
     )
 
+    st = sub.add_parser("study", help="quick checks of the mentor's timing and bias claims")
+    st.add_argument("names", nargs="*", help="studies to run (default: all)")
+    st.add_argument("--from", dest="start", type=date.fromisoformat, default=date(2019, 6, 1))
+    st.add_argument(
+        "--to",
+        dest="end",
+        type=date.fromisoformat,
+        default=date(2026, 4, 30),
+        help="exclusive; the default keeps the last 6 months out (the holdout)",
+    )
+    st.add_argument("--config", type=Path, help="TOML config overriding the defaults")
+    st.add_argument("--store", type=Path, help="local bar store root")
+
     dg = sub.add_parser("diagnose", help="why a setup's backtest won or lost (research only)")
     dg.add_argument("setup", help="e.g. ote_pullback")
     dg.add_argument("--trial", default="default", help="which tested version (default: default)")
@@ -166,6 +179,8 @@ def main(
         return _backtest(args)
     if args.command == "funnel":
         return _funnel(args)
+    if args.command == "study":
+        return _study(args)
     if args.command == "diagnose":
         from moon_ai.backtest.diagnose import diagnose
 
@@ -487,6 +502,28 @@ def _backtest(args: argparse.Namespace) -> int:
         import webbrowser
 
         webbrowser.open(page.resolve().as_uri())
+    return 0
+
+
+def _study(args: argparse.Namespace) -> int:
+    from moon_ai.research.studies import STUDIES, load
+
+    names = args.names or list(STUDIES)
+    unknown = [n for n in names if n not in STUDIES]
+    if unknown:
+        print(f"unknown studies {unknown}; known: {', '.join(STUDIES)}", file=sys.stderr)
+        return 2
+    config = load_config(args.config)
+    df = load(
+        args.store or config.data.store_root, "MNQ.v.0", args.start, args.end, config.data.dataset
+    )
+    if df.height == 0:
+        print("no bars found; run `moon-ai download` first", file=sys.stderr)
+        return 2
+    print(f"MNQ {args.start} to {args.end} (exclusive), {df['tday'].n_unique()} trading days\n")
+    for n in names:
+        print(f"[{n}]")
+        print("\n".join(STUDIES[n](df)), end="\n\n", flush=True)
     return 0
 
 
