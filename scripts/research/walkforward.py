@@ -236,6 +236,8 @@ def main() -> int:
         default="MNQ,MES",
         help="comma-separated roots, e.g. MNQ,MES,M2K,MYM,MGC,MCL,M6E",
     )
+    ap.add_argument("--family", help="only variants whose name starts with this, e.g. time_mom")
+    ap.add_argument("--fixed", help="trade exactly this variant name in every quarter")
     ap.add_argument(
         "--per-market",
         type=int,
@@ -259,6 +261,10 @@ def main() -> int:
                     name, mk.symbol, screen.simulate_detail(mk, side, entry, dist, tr), mk.days
                 )
             )
+    if args.family:
+        cands = [c for c in cands if c.name.startswith(args.family)]
+    if args.fixed:
+        cands = [c for c in cands if c.name == args.fixed]
     print(f"{len(cands)} candidates (variant x market); plans: {', '.join(plans)}")
 
     oos: list[tuple[date, list[Trade], Rules | None, float]] = []
@@ -269,6 +275,8 @@ def main() -> int:
         train_lo = add_months(test_lo, -12)
         scored = sorted(((score(c, train_lo, test_lo), c) for c in cands), key=lambda x: -x[0][0])
         chosen = [c for (s, n, m), c in scored if s > 0 and m > 0][: args.top]
+        if args.fixed:
+            chosen = cands  # the same rule every quarter; only plan and risk are tuned
         if args.per_market:
             chosen = []
             for mk in markets:

@@ -1,0 +1,51 @@
+warning: The `UV_NATIVE_TLS` environment variable is deprecated and will be removed in a future release. Use `UV_SYSTEM_CERTS` instead.
+2 candidates (variant x market); plans: lucidflex_50k, tradeify_growth_50k, tradeify_select_flex_50k, tradeify_select_daily_50k
+Q1 2023-11-01..2024-02-01: lucidflex_50k @ $500/trade (tuning-year net $164/mo per account)
+    time_mom m=60 th=0.25 k=0.25 t=2.0 [MNQ]; time_mom m=60 th=0.25 k=0.25 t=2.0 [MES]
+Q2 2024-02-01..2024-05-01: lucidflex_50k @ $500/trade (tuning-year net $232/mo per account)
+    time_mom m=60 th=0.25 k=0.25 t=2.0 [MNQ]; time_mom m=60 th=0.25 k=0.25 t=2.0 [MES]
+Q3 2024-05-01..2024-08-01: lucidflex_50k @ $500/trade (tuning-year net $243/mo per account)
+    time_mom m=60 th=0.25 k=0.25 t=2.0 [MNQ]; time_mom m=60 th=0.25 k=0.25 t=2.0 [MES]
+Q4 2024-08-01..2024-11-01: lucidflex_50k @ $500/trade (tuning-year net $276/mo per account)
+    time_mom m=60 th=0.25 k=0.25 t=2.0 [MNQ]; time_mom m=60 th=0.25 k=0.25 t=2.0 [MES]
+Q5 2024-11-01..2025-02-01: lucidflex_50k @ $500/trade (tuning-year net $163/mo per account)
+    time_mom m=60 th=0.25 k=0.25 t=2.0 [MNQ]; time_mom m=60 th=0.25 k=0.25 t=2.0 [MES]
+Q6 2025-02-01..2025-05-01: lucidflex_50k @ $400/trade (tuning-year net $179/mo per account)
+    time_mom m=60 th=0.25 k=0.25 t=2.0 [MNQ]; time_mom m=60 th=0.25 k=0.25 t=2.0 [MES]
+Q7 2025-05-01..2025-08-01: tradeify_growth_50k @ $500/trade (tuning-year net $214/mo per account)
+    time_mom m=60 th=0.25 k=0.25 t=2.0 [MNQ]; time_mom m=60 th=0.25 k=0.25 t=2.0 [MES]
+Q8 2025-08-01..2025-11-01: lucidflex_50k @ $400/trade (tuning-year net $78/mo per account)
+    time_mom m=60 th=0.25 k=0.25 t=2.0 [MNQ]; time_mom m=60 th=0.25 k=0.25 t=2.0 [MES]
+
+untouched quarters, 3 copy-traded accounts:
+  month       net total   eval fees
+  2023-11         -390         390
+  2023-12         -390         390
+  2024-01         -390         390
+  2024-02         -390         390
+  2024-03         -390         390
+  2024-04         -390         390
+  2024-05            0           0
+  2024-06            0           0
+  2024-07         -390         390
+  2024-08        4,773           0
+  2024-09        5,400           0
+  2024-10         -390         390
+  2024-11         -390         390
+  2024-12            0           0
+  2025-01         -390         390
+  2025-02         -390         390
+  2025-03         -390         390
+  2025-04            0           0
+  2025-05            0           0
+  2025-06            0           0
+  2025-07         -435         435
+  2025-08         -390         390
+  2025-09            0           0
+  2025-10        2,884           0
+  quarters: -1,170, -1,170, -390, +9,783, -780, -780, -435, +2,494
+  evaluations bought 14, passed 5, funded accounts blown 4 (per account slot)
+  ✕ average >= $2,000/month total (got $315)
+  ✕ money made in >= 6 of 8 quarters (got 2)
+  ✓ eval spending <= $500 every month (max $435)
+verdict: not a winner
