@@ -21,6 +21,7 @@ from moon_ai.data.download import (
     databento_client,
     resolve_api_key,
 )
+from moon_ai.holdout import HOLDOUT_START
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -72,7 +73,7 @@ def _parser() -> argparse.ArgumentParser:
     rv.add_argument("setup", nargs="?", help="e.g. ny_am_silver_bullet")
     rv.add_argument("--days", type=int, default=50, help="how many days to sample (default 50)")
     rv.add_argument("--from", dest="start", type=date.fromisoformat, default=date(2019, 6, 3))
-    rv.add_argument("--to", dest="end", type=date.fromisoformat, default=date(2026, 5, 1))
+    rv.add_argument("--to", dest="end", type=date.fromisoformat, default=HOLDOUT_START)
     rv.add_argument("--seed", type=int, default=7, help="which random sample")
     rv.add_argument("--store", type=Path, help="local bar store root")
     rv.add_argument("--out", type=Path, default=Path("data/review"), help="where the page goes")
@@ -119,6 +120,11 @@ def _parser() -> argparse.ArgumentParser:
     b.add_argument("--runs", type=Path, default=Path("data/runs"), help="where runs are written")
     b.add_argument(
         "--no-open", action="store_true", help="don't open the report card in the browser"
+    )
+    b.add_argument(
+        "--holdout-signoff",
+        action="store_true",
+        help="a finalist's one look at the locked holdout (one setup and trial, once)",
     )
     b.add_argument(
         "--no-news",
@@ -371,6 +377,13 @@ def _review_days(args: argparse.Namespace) -> int:
     if not args.setup:
         print("refused: name a setup, or use --import FILE", file=sys.stderr)
         return 2
+    from moon_ai.holdout import HoldoutLocked, guard
+
+    try:
+        guard(args.start, args.end)
+    except HoldoutLocked as exc:
+        print(f"refused: {exc}", file=sys.stderr)
+        return 2
     days = sample_days(store, args.start, args.end, args.days, args.seed)
     if not days:
         print(f"refused: no price data in {store.root} for those dates", file=sys.stderr)
@@ -426,7 +439,24 @@ def _verify(args: argparse.Namespace) -> int:
 
 def _backtest(args: argparse.Namespace) -> int:
     from moon_ai.backtest.runner import NewsCalendarMissing, run_backtest
+    from moon_ai.holdout import HoldoutLocked, guard, sign_off
 
+    try:
+        if args.holdout_signoff:
+            if args.all or args.round2 or not args.setup:
+                raise HoldoutLocked("a holdout sign-off is for one named setup and trial")
+            sign_off(
+                args.setup,
+                args.trial or "default",
+                args.start,
+                args.end,
+                ledger=args.runs.parent / "holdout_checks.jsonl",
+            )
+        else:
+            guard(args.start, args.end)
+    except HoldoutLocked as exc:
+        print(f"refused: {exc}", file=sys.stderr)
+        return 2
     if args.round2:
         return _backtest_round2(args)
     if args.all:
@@ -496,8 +526,14 @@ def _funnel(args: argparse.Namespace) -> int:
     import tempfile
 
     from moon_ai.backtest.runner import NewsCalendarMissing, run_backtest
+    from moon_ai.holdout import HoldoutLocked, guard
     from moon_ai.setups.silver_bullet import FUNNEL
 
+    try:
+        guard(args.start, args.end)
+    except HoldoutLocked as exc:
+        print(f"refused: {exc}", file=sys.stderr)
+        return 2
     reached: dict[date, int] = {}
     with tempfile.TemporaryDirectory() as tmp:
         try:
