@@ -115,7 +115,15 @@ def test_rescue_trials_must_be_pre_registered(store):
     assert r.summary["trades"] > 0
 
 
-def test_cli_backtest_prints_a_summary(store, capsys):
+@pytest.fixture
+def unlocked(monkeypatch):
+    """The synthetic bars sit in July 2026, inside the locked holdout; move the
+    lock out of the way so CLI tests check the CLI, not the guard."""
+    monkeypatch.setattr("moon_ai.holdout.HOLDOUT_START", date(2030, 1, 1))
+    monkeypatch.setattr("moon_ai.holdout.HOLDOUT_END", date(2031, 1, 1))
+
+
+def test_cli_backtest_prints_a_summary(store, capsys, unlocked):
     code = main(
         [
             "backtest",
@@ -152,7 +160,7 @@ def test_cli_backtest_prints_a_summary(store, capsys):
     )
 
 
-def test_cli_backtest_all_writes_a_summary(store, capsys):
+def test_cli_backtest_all_writes_a_summary(store, capsys, unlocked):
     code = main(
         [
             "backtest",
@@ -190,7 +198,7 @@ def test_the_kill_switch_does_not_end_a_backtest(store):
     assert run["notes"]["kill_switch"].startswith("off")
 
 
-def test_funnel_counts_how_far_each_day_got_and_writes_no_trial(store, capsys):
+def test_funnel_counts_how_far_each_day_got_and_writes_no_trial(store, capsys, unlocked):
     args = ["funnel", "ny_am_silver_bullet", "--from", "2026-07-13", "--to", "2026-07-25"]
     code = main([*args, "--store", str(store / "bars")])
     out = capsys.readouterr().out

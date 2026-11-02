@@ -17,11 +17,11 @@ from typing import Any
 from moon_ai.backtest.evaluate import MIN_TRADES, Evaluation
 from moon_ai.backtest.stats import Metrics
 from moon_ai.data.news import NEWS_CSV, load_events
+from moon_ai.holdout import HOLDOUT_START
 from moon_ai.journal import decode_json, read_run
 from moon_ai.sessions import to_ny
 from moon_ai.setups import load_setup_defaults
 
-HOLDOUT_MONTHS = 6
 SKIP_WORDS = {
     "skipped:ml": "low ML confidence",
     "skipped:cap": "already 2 trades that session",
@@ -36,11 +36,6 @@ SKIP_WORDS = {
 }
 
 
-def holdout_start(today: date) -> date:
-    """Start of the untouched holdout: the most recent 6 months."""
-    return today - timedelta(days=round(HOLDOUT_MONTHS * 30.44))
-
-
 def warnings_for(run: dict[str, Any], today: date, news_csv: Path = NEWS_CSV) -> list[str]:
     out = []
     notes = run.get("notes") or {}
@@ -53,10 +48,9 @@ def warnings_for(run: dict[str, Any], today: date, news_csv: Path = NEWS_CSV) ->
             "The news calendar doesn't have CPI, jobs-report or PPI times yet, so trades "
             "around those releases weren't blocked. Results are slightly optimistic."
         )
-    start = holdout_start(today)
-    if run["data_end"].date() > start:
+    if run["data_end"].date() > HOLDOUT_START:
         out.append(
-            f"This run uses data from the untouched holdout (from {start}). That data is "
+            f"This run uses data from the locked holdout (from {HOLDOUT_START}). That data is "
             "for final sign-off only; tune nothing on it."
         )
     return out

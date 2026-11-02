@@ -1,7 +1,7 @@
 from datetime import date
 
 from moon_ai.backtest.evaluate import evaluate
-from moon_ai.backtest.report import holdout_start, render, warnings_for
+from moon_ai.backtest.report import render, warnings_for
 from moon_ai.backtest.runner import run_backtest
 from moon_ai.journal import decode_json, read_run
 from tests.test_backtest_runner import DAYS, LOSS, SETUP, WIN, session_rows
@@ -44,7 +44,6 @@ def test_report_card_says_it_plainly(tmp_path):
 def test_warnings(tmp_path):
     r = make_run(tmp_path, news=False)
     run = decode_json(read_run(r.folder, "runs"), "runs")[0]
-    assert holdout_start(date(2026, 11, 1)) == date(2026, 5, 2)
-    # July 2026 is inside the last 6 months on 2026-11-01, but not by mid-2027.
+    # July 2026 is inside the locked holdout, whatever today's date is.
     assert any("holdout" in w for w in warnings_for(run, date(2026, 11, 1)))
-    assert not any("holdout" in w for w in warnings_for(run, date(2027, 6, 1)))
+    assert any("holdout" in w for w in warnings_for(run, date(2028, 6, 1)))
