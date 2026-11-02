@@ -77,11 +77,12 @@ class DayStats:
 class DayBook:
     """Daily statistics built bar by bar from 1-minute bars of one symbol."""
 
-    def __init__(self, atr_days: int = 14, noise_days: int = 14):
+    def __init__(self, atr_days: int = 14, noise_days: int = 14, regime_days: int = 100):
         self.atr_days = atr_days
         self.noise_days = noise_days
         self.today: _Day | None = None
         self.done: deque[_Day] = deque(maxlen=max(atr_days, noise_days) + 1)
+        self.atr_hist: deque[float] = deque(maxlen=regime_days)  # ATR at each finished day
         self._last: datetime | None = None
 
     def update(self, bar: Bar) -> None:
@@ -92,6 +93,9 @@ class DayBook:
         if self.today is None or self.today.date != day:
             if self.today is not None and self.today.close is not None:
                 self.done.append(self.today)
+                atr = self._atr()
+                if atr is not None:
+                    self.atr_hist.append(atr)
             self.today = _Day(day, bar.instrument_id)
         d = self.today
         ny = to_ny(bar.ts_open)
@@ -109,9 +113,8 @@ class DayBook:
             minute = (to_ny(bar.ts_close) - datetime.combine(d.date, RTH_OPEN, tzinfo=NY)).seconds
             d.moves[minute // 60] = abs(bar.close / d.open - 1)
 
-    def stats(self) -> DayStats | None:
-        d = self.today
-        if d is None or d.open is None or len(self.done) < self.atr_days + 1:
+    def _atr(self) -> float | None:
+        if len(self.done) < self.atr_days + 1:
             return None
         days = list(self.done)
         ranges = []
@@ -120,10 +123,26 @@ class DayBook:
                 ranges.append(max(cur.high, prev.close) - min(cur.low, prev.close))
             else:  # contract roll: prices aren't comparable across it
                 ranges.append(cur.high - cur.low)
-        prev = days[-1]
+        return sum(ranges) / len(ranges)
+
+    def regime(self) -> str | None:
+        """ "high" or "low": the latest ATR against the median of the last
+        `regime_days` days' ATRs (finished days only). None until that many."""
+        if len(self.atr_hist) < (self.atr_hist.maxlen or 0):
+            return None
+        ranked = sorted(self.atr_hist)
+        median = ranked[len(ranked) // 2]
+        return "high" if self.atr_hist[-1] > median else "low"
+
+    def stats(self) -> DayStats | None:
+        d = self.today
+        atr = self._atr()
+        if d is None or d.open is None or atr is None:
+            return None
+        prev = self.done[-1]
         if prev.instrument_id != d.instrument_id or prev.close is None:
             return None
-        return DayStats(sum(ranges) / len(ranges), prev.close, d.open, d.on_high, d.on_low)
+        return DayStats(atr, prev.close, d.open, d.on_high, d.on_low)
 
     def noise(self, minute: int) -> float | None:
         """Average |close/open - 1| at this minute over the last `noise_days` days."""
@@ -141,7 +160,7 @@ class _Intraday:
         self.config = config
         self.symbol = symbol
         self.tick = config.instrument(symbol).tick_size
-        self.book = DayBook(params.atr_days, params.noise_days)
+        self.book = DayBook(params.atr_days, params.noise_days, params.regime_days)
         self._done: set[date] = set()
 
     def scan(self, ctx: Context) -> list[Candidate]:
@@ -155,6 +174,8 @@ class _Intraday:
             return []
         stats = self.book.stats()
         if stats is None:
+            return []
+        if self.params.vol_regime != "any" and self.book.regime() != self.params.vol_regime:
             return []
         cand = self.decide(bar, ctx.now, to_ny(ctx.now), stats)
         if cand is None:
@@ -353,4 +374,96 @@ class GapFill(_Intraday):
         stop = c - sign * p.gap_stop_mult * abs(gap)
         return self._candidate(
             now, long, c, stop, s, {"gap": gap, "gap_atr": size}, target=s.prev_close
+        )
+
+
+# --- Batch 2 (2026-11-02, #102 follow-up) -------------------------------------------------
+
+
+@register("orb_high_vol")
+class OrbHighVol(OpeningRangeBreakout):
+    """The opening-range breakout, only when volatility is high (`vol_regime`)."""
+
+
+@register("vwap_pullback")
+class VwapPullback(_Intraday):
+    """Trend-day continuation: once the day has moved `trend_min_atr` from the
+    open and VWAP sits on the trend side of the open, enter on the first bar
+    (10:30-14:00) that touches VWAP and closes back on the trend side."""
+
+    def decide(self, bar, now, ny, s):
+        p = self.params
+        if not time(10, 30) <= ny.time() <= time(14, 0):
+            return None
+        d = self.book.today
+        if d is None or d.vwap is None or d.open is None:
+            return None
+        vwap, need = d.vwap, p.trend_min_atr * s.atr
+        up = d.high - d.open >= need and vwap > d.open
+        down = d.open - d.low >= need and vwap < d.open
+        if up and bar.low <= vwap < bar.close:
+            long = True
+        elif down and bar.high >= vwap > bar.close:
+            long = False
+        else:
+            return None
+        c = bar.close
+        sign = 1 if long else -1
+        stop = vwap - sign * (p.stop_atr or 0.25) * s.atr
+        return self._candidate(
+            now, long, c, stop, s, {"vwap": vwap, "trend": "up" if up else "down"}
+        )
+
+
+@register("vwap_reversion")
+class VwapReversion(_Intraday):
+    """Quiet-market mean reversion: 10:30-15:00, a close at least `vwap_dev_atr`
+    ATRs from VWAP is faded toward VWAP; stop the same distance beyond."""
+
+    def decide(self, bar, now, ny, s):
+        p = self.params
+        if not time(10, 30) <= ny.time() <= time(15, 0):
+            return None
+        d = self.book.today
+        if d is None or d.vwap is None:
+            return None
+        dev = bar.close - d.vwap
+        if abs(dev) < p.vwap_dev_atr * s.atr:
+            return None
+        long = dev < 0
+        sign = 1 if long else -1
+        stop = bar.close - sign * p.dev_stop_mult * abs(dev)
+        return self._candidate(
+            now, long, bar.close, stop, s, {"vwap": d.vwap, "dev_atr": dev / s.atr}, target=d.vwap
+        )
+
+
+def _weekdays_between(a: date, b: date) -> int:
+    """Weekdays in (a, b]."""
+    n, d = 0, a
+    while d < b:
+        d += timedelta(days=1)
+        n += d.weekday() < 5
+    return n
+
+
+@register("turn_of_month")
+class TurnOfMonth(_Intraday):
+    """Long the cash session on the last `tom_days_before` weekdays of a month
+    and the first `tom_days_after` of the next (holidays not excluded; the
+    calendar is known in advance). Entry at 09:31, held to the time-out."""
+
+    def decide(self, bar, now, ny, s):
+        p = self.params
+        if not _at(ny, time(9, 31)):
+            return None
+        today = ny.date()
+        first_next = (today.replace(day=28) + timedelta(days=4)).replace(day=1)
+        left = _weekdays_between(today, first_next - timedelta(days=1))  # after today
+        into = _weekdays_between(today.replace(day=1) - timedelta(days=1), today)
+        if left >= p.tom_days_before and into > p.tom_days_after:
+            return None
+        c = bar.close
+        return self._candidate(
+            now, True, c, self._atr_stop(True, c, s), s, {"left": left, "into": into}
         )

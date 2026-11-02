@@ -285,7 +285,7 @@ def test_setups_combine_the_verdict_with_paper_results(tmp_path):
         )
     )
     rows = {s["setup"]: s for s in client(tmp_path, paths).get("/api/setups").json()}
-    assert len(rows) == 10  # five ICT setups and the five non-ICT batch 1 (#102)
+    assert len(rows) == 14  # five ICT setups, five of batch 1 and four of batch 2 (#102)
     am = rows["ny_am_silver_bullet"]
     assert am["verdict"] == "go-forward" and am["checks"]["dsr"] == 0.97
     assert am["window_ny"] == "10:00-11:00" and am["risk_per_trade_usd"] == 500

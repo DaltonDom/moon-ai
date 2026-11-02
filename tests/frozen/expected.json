@@ -490,6 +490,10 @@
     }
    ]
   },
+  "orb_high_vol": {
+   "candidates": [],
+   "trades": []
+  },
   "ote_pullback": {
    "candidates": [
     {
@@ -847,6 +851,56 @@
      "r": -1.014
     }
    ]
+  },
+  "turn_of_month": {
+   "candidates": [],
+   "trades": []
+  },
+  "vwap_pullback": {
+   "candidates": [
+    {
+     "candidate_id": "vwap_pullback:2026-10-20T16:55:00+00:00:long",
+     "entry": null,
+     "status": "taken",
+     "stop": 29586.5,
+     "tags": [],
+     "target": 29944.25
+    },
+    {
+     "candidate_id": "vwap_pullback:2026-10-23T17:20:00+00:00:long",
+     "entry": null,
+     "status": "taken",
+     "stop": 29059.5,
+     "tags": [],
+     "target": 29453.25
+    }
+   ],
+   "trades": [
+    {
+     "candidate_id": "vwap_pullback:2026-10-20T16:55:00+00:00:long",
+     "entry_price": 29706.5,
+     "entry_time": "2026-10-20T16:56:00+00:00",
+     "exit_price": 29689.75,
+     "exit_reason": "timeout",
+     "exit_time": "2026-10-20T19:56:00+00:00",
+     "net_usd": -71.0,
+     "r": -0.147917
+    },
+    {
+     "candidate_id": "vwap_pullback:2026-10-23T17:20:00+00:00:long",
+     "entry_price": 29190.75,
+     "entry_time": "2026-10-23T17:21:00+00:00",
+     "exit_price": 29120.25,
+     "exit_reason": "timeout",
+     "exit_time": "2026-10-23T19:56:00+00:00",
+     "net_usd": -143.0,
+     "r": -0.544762
+    }
+   ]
+  },
+  "vwap_reversion": {
+   "candidates": [],
+   "trades": []
   }
  },
  "window": [

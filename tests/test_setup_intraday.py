@@ -158,3 +158,54 @@ def to_ny_time(ts):
     from moon_ai.sessions import to_ny
 
     return to_ny(ts).time()
+
+
+# --- batch 2 -------------------------------------------------------------------------------
+
+
+def test_regime_compares_the_latest_atr_with_the_median():
+    book = DayBook(regime_days=5)
+    assert book.regime() is None
+    for x in (10, 12, 11, 9, 13):
+        book.atr_hist.append(x)
+    assert book.regime() == "high"  # 13 > median 11
+    book.atr_hist.append(8)
+    assert book.regime() == "low"
+
+
+def test_turn_of_month_days():
+    d = load_setup_defaults()["turn_of_month"]
+    s = REGISTRY["turn_of_month"](d.params, load_config())
+    from moon_ai.setups.intraday import DayStats
+
+    stats = DayStats(atr=10.0, prev_close=BASE, open=BASE, on_high=BASE, on_low=BASE)
+
+    def fires(day):
+        ny = datetime.combine(day, time(9, 31), tzinfo=NY)
+        b = bar(day, 9, 30, BASE)
+        return s.decide(b, ny.astimezone(UTC), ny, stats) is not None
+
+    # May 2024: Fri 31 is the last weekday; June 3-5 (Mon-Wed) are the first three.
+    assert [fires(date(2024, 5, x)) for x in (29, 30, 31)] == [False, False, True]
+    assert [fires(date(2024, 6, x)) for x in (3, 4, 5, 6)] == [True, True, True, False]
+
+
+def test_vwap_pullback_buys_the_first_touch_on_a_trend_day():
+    # Up 10 points (1 ATR) by 10:00, then a dip to the open-side VWAP after 10:30.
+    prices = [BASE + m * 0.4 for m in range(30)] + [BASE + 12] * 30 + [BASE + 6] + [BASE + 9] * 5
+    rows = rth(DAY, prices)
+    rows[60] = bar(DAY, 10, 30, BASE + 9, BASE + 9, BASE + 3, BASE + 9)  # wick through VWAP
+    cands = run("vwap_pullback", rows)
+    assert len(cands) == 1 and cands[0].side == "long"
+    assert to_ny_time(cands[0].decision_time) == time(10, 31)
+
+
+def test_vwap_reversion_fades_back_to_vwap():
+    prices = [BASE] * 61 + [BASE - 5] * 5  # 0.5 ATR under VWAP at 10:31
+    p = load_setup_defaults()["vwap_reversion"].params
+    from dataclasses import replace as dc_replace
+
+    cands = run("vwap_reversion", rth(DAY, prices), params=dc_replace(p, vol_regime="any"))
+    assert len(cands) == 1
+    c = cands[0]
+    assert c.side == "long" and BASE - 1 < c.target <= BASE  # VWAP, pulled down a little

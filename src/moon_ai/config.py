@@ -60,6 +60,9 @@ def _default_windows() -> dict[str, Window]:
         "last_half_hour": _w("15:30", "15:31"),
         "rth_open_90": _w("09:35", "11:01"),
         "rth_first_minute": _w("09:31", "09:32"),
+        # Batch 2:
+        "rth_midday": _w("10:30", "14:01"),
+        "rth_reversion": _w("10:30", "15:01"),
     }
 
 

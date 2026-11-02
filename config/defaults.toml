@@ -366,3 +366,77 @@ gap_stop_mult = 1.0
   [[setups.gap_fill.rescue]]
   name = "gap_max_0.4"
   gap_max_atr = 0.4
+
+# ---------------------------------------------------------------------------
+# Non-ICT batch 2, pre-registered 2026-11-02 before any backtest, after batch
+# 1's only pass (noise_breakout) failed the holdout (docs/research/
+# batch1-results.md). Same bar as batch 1, including the prop-firm bar and the
+# MES confirmation; research data only (to 2025-11-01).
+
+[setups.orb_high_vol]
+title = "Opening-range breakout, volatile markets only"
+priority = 11
+# orb_5m's rules (it came closest in batch 1: DSR 0.92), traded only when the
+# 14-day ATR is above its 100-day median: momentum is reported to be stronger
+# in volatile markets (Zarattini & Aziz 2023 report this for the ORB itself).
+window = "rth_first_hour"
+timeout = "15:55"
+vol_regime = "high"
+
+  [[setups.orb_high_vol.rescue]]
+  name = "stop_atr_0.1"
+  stop_atr = 0.1
+
+[setups.vwap_pullback]
+title = "Trend-day pullback to VWAP"
+priority = 12
+# Once the day has moved 0.5 ATR from the open with VWAP on that side, take
+# the first 10:30-14:00 bar that touches VWAP and closes back with the trend;
+# stop 0.25 ATR beyond VWAP, target 2R.
+window = "rth_midday"
+timeout = "15:55"
+stop_atr = 0.25
+target_r = 2.0
+trend_min_atr = 0.5
+
+  [[setups.vwap_pullback.rescue]]
+  name = "target_4r"
+  target_r = 4.0
+  [[setups.vwap_pullback.rescue]]
+  name = "trend_0.75"
+  trend_min_atr = 0.75
+
+[setups.vwap_reversion]
+title = "VWAP reversion, quiet markets only"
+priority = 13
+# Only when the 14-day ATR is below its 100-day median: from 10:30 to 15:00,
+# fade a close 0.35 ATR or more from VWAP back to VWAP; stop the same distance
+# beyond the entry.
+window = "rth_reversion"
+timeout = "15:55"
+vol_regime = "low"
+vwap_dev_atr = 0.35
+dev_stop_mult = 1.0
+
+  [[setups.vwap_reversion.rescue]]
+  name = "dev_0.5"
+  vwap_dev_atr = 0.5
+  [[setups.vwap_reversion.rescue]]
+  name = "any_regime"
+  vol_regime = "any"
+
+[setups.turn_of_month]
+title = "Turn of the month"
+priority = 14
+# Long the cash session (09:31 to 15:55) on the last weekday of the month and
+# the first three of the next (Lakonishok & Smidt 1988; McConnell & Xu 2008);
+# stop 0.5 ATR.
+window = "rth_first_minute"
+timeout = "15:55"
+stop_atr = 0.5
+tom_days_before = 1
+tom_days_after = 3
+
+  [[setups.turn_of_month.rescue]]
+  name = "stop_atr_1.0"
+  stop_atr = 1.0

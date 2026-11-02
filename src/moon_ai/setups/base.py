@@ -87,6 +87,16 @@ class SetupParams:
     # "simple": one trade a day, held; "paper": the boundary/VWAP exit plus
     # re-entry at later checkpoints (the 2-trades-a-session cap still applies).
     noise_variant: Literal["simple", "paper"] = "simple"
+    # Batch 2 (2026-11-02):
+    # Trade only when the 14-day ATR is above ("high") or below ("low") its
+    # median over the last `regime_days` finished days.
+    vol_regime: Literal["any", "high", "low"] = "any"
+    regime_days: int = 100
+    trend_min_atr: float = 0.5  # vwap_pullback: the day's move from the open that makes a trend
+    vwap_dev_atr: float = 0.35  # vwap_reversion: distance from VWAP, in ATRs, that is faded
+    dev_stop_mult: float = 1.0  # vwap_reversion: stop distance as a multiple of that distance
+    tom_days_before: int = 1  # turn_of_month: trading days before the month end
+    tom_days_after: int = 3  # turn_of_month: trading days into the new month
 
 
 @dataclass(frozen=True)

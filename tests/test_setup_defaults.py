@@ -39,6 +39,11 @@ def test_the_setups_are_pre_registered_in_priority_order():
         "intraday_momentum",
         "overnight_breakout",
         "gap_fill",
+        # Non-ICT batch 2, pre-registered 2026-11-02.
+        "orb_high_vol",
+        "vwap_pullback",
+        "vwap_reversion",
+        "turn_of_month",
     ]
 
 
