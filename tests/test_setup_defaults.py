@@ -44,6 +44,10 @@ def test_the_setups_are_pre_registered_in_priority_order():
         "vwap_pullback",
         "vwap_reversion",
         "turn_of_month",
+        # Batch 3 (overnight), pre-registered 2026-11-02.
+        "overnight_hold",
+        "overnight_after_down",
+        "euro_open_drift",
     ]
 
 
@@ -58,7 +62,10 @@ def test_windows_and_time_outs_follow_the_design():
         time(15, 55)
     }
     # Batch 1 is flat before the 16:00 flat-by rule; intraday momentum holds to 15:59.
-    assert all(d.params.timeout <= time(15, 59) for n, d in D.items() if n not in ICT)
+    overnight = {"overnight_hold", "overnight_after_down", "euro_open_drift"}
+    assert all(d.params.timeout <= time(15, 59) for n, d in D.items() if n not in ICT | overnight)
+    # Overnight setups exit before the cash open, inside the same trading day.
+    assert all(D[n].params.timeout <= time(9, 30) for n in overnight)
 
 
 def test_ict_timestamp_changes_are_applied():

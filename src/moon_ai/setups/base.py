@@ -97,6 +97,9 @@ class SetupParams:
     dev_stop_mult: float = 1.0  # vwap_reversion: stop distance as a multiple of that distance
     tom_days_before: int = 1  # turn_of_month: trading days before the month end
     tom_days_after: int = 3  # turn_of_month: trading days into the new month
+    # Batch 3 (2026-11-02): overnight drift, entered and exited inside one CME
+    # trading day (18:00 to 17:00), which the prop firms allow.
+    after_down: bool = False  # only after a cash session that closed below its open
 
 
 @dataclass(frozen=True)

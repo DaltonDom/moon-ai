@@ -172,7 +172,7 @@ class _Intraday:
         day = trading_day(ctx.now)
         if day in self._done:
             return []
-        stats = self.book.stats()
+        stats = self.stats()
         if stats is None:
             return []
         if self.params.vol_regime != "any" and self.book.regime() != self.params.vol_regime:
@@ -185,6 +185,9 @@ class _Intraday:
         return [cand]
 
     once_a_day = True
+
+    def stats(self) -> DayStats | None:
+        return self.book.stats()
 
     def decide(self, bar: Bar, now: datetime, ny: datetime, s: DayStats) -> Candidate | None:
         raise NotImplementedError
@@ -214,7 +217,6 @@ class _Intraday:
         target = self._round(target)
         if sign * (target - price) <= 0:
             return None
-        ny_date = to_ny(now).date()
         return Candidate(
             setup=self.name,
             symbol=self.symbol,
@@ -224,7 +226,8 @@ class _Intraday:
             entry=None,
             stop=stop,
             target=target,
-            timeout=datetime.combine(ny_date, p.timeout, tzinfo=NY),
+            # On the trading day (18:00-17:00), so an evening entry exits next morning.
+            timeout=datetime.combine(trading_day(now), p.timeout, tzinfo=NY),
             rule_results=rule_results,
             features={
                 "risk_atr": risk / s.atr,
@@ -467,3 +470,55 @@ class TurnOfMonth(_Intraday):
         return self._candidate(
             now, True, c, self._atr_stop(True, c, s), s, {"left": left, "into": into}
         )
+
+
+# --- Batch 3 (2026-11-02): overnight drift ----------------------------------------------
+
+
+class _Overnight(_Intraday):
+    """Long at `entry_time` and out at the time-out, both inside one CME trading
+    day (18:00 to 17:00 New York), so the prop firms' flat-by-16:45 rule holds.
+
+    Lou, Polk & Skouras (2019) and Kelly & Clark (2011): index returns accrue
+    overnight. Boyarchenko, Larsen & Whelan (2023, NY Fed Staff Report 917): in
+    S&P futures the overnight drift concentrates around the European open and
+    is larger after the US session sold off.
+    """
+
+    def stats(self) -> DayStats | None:
+        """Before the cash open there is no 'today' open: use the last finished day."""
+        atr = self.book._atr()
+        if atr is None or not self.book.done:
+            return None
+        prev = self.book.done[-1]
+        today = self.book.today
+        if prev.close is None or today is None or prev.instrument_id != today.instrument_id:
+            return None
+        return DayStats(atr, prev.close, prev.close, today.on_high, today.on_low)
+
+    def decide(self, bar, now, ny, s):
+        p = self.params
+        if p.entry_time is None or not _at(ny, p.entry_time):
+            return None
+        prev = self.book.done[-1]
+        if p.after_down and not (prev.open is not None and prev.close < prev.open):
+            return None
+        c = bar.close
+        return self._candidate(
+            now, True, c, self._atr_stop(True, c, s), s, {"prev_rth": prev.close / prev.open - 1}
+        )
+
+
+@register("overnight_hold")
+class OvernightHold(_Overnight):
+    """From the 18:00 reopen to just before the 09:30 cash open."""
+
+
+@register("overnight_after_down")
+class OvernightAfterDown(_Overnight):
+    """The same hold, only after a cash session that closed below its open."""
+
+
+@register("euro_open_drift")
+class EuroOpenDrift(_Overnight):
+    """Long around the European open (02:00 to 03:30 New York)."""

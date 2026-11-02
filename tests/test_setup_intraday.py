@@ -209,3 +209,50 @@ def test_vwap_reversion_fades_back_to_vwap():
     assert len(cands) == 1
     c = cands[0]
     assert c.side == "long" and BASE - 1 < c.target <= BASE  # VWAP, pulled down a little
+
+
+# --- batch 3: overnight ---------------------------------------------------------------------
+
+
+def evening_then_rth(day, open_=BASE, close=BASE):
+    """The 18:00 reopen the evening before `day`, then its cash session."""
+    out = [bar(day - timedelta(days=1), 18, 0, close)]
+    prices = [open_] + [close] * 389
+    return out + rth(day, prices)
+
+
+def run_overnight(setup, last_day_open=BASE, last_day_close=BASE):
+    d = load_setup_defaults()[setup]
+    s = REGISTRY[setup](d.params, load_config())
+    ctx = Context(broker=None, journal=None)
+    days = [*WARMUP, DAY]
+    out = []
+    for i, day in enumerate(days):
+        o, c = (last_day_open, last_day_close) if i == len(days) - 1 else (BASE, BASE)
+        for b in evening_then_rth(day, o, c):
+            ctx._append(b)
+            out += s.scan(ctx)
+    tue = DAY + timedelta(days=1)
+    ctx._append(bar(DAY, 18, 0, last_day_close))  # the reopen for Tuesday
+    out += s.scan(ctx)
+    return [c for c in out if trading_day_of(c.decision_time) == tue]
+
+
+def trading_day_of(ts):
+    from moon_ai.sessions import trading_day
+
+    return trading_day(ts)
+
+
+def test_overnight_hold_buys_the_reopen_and_exits_before_the_cash_open():
+    (c,) = run_overnight("overnight_hold")
+    assert c.side == "long"
+    assert to_ny_time(c.decision_time) == time(18, 1)
+    assert c.timeout == datetime.combine(DAY + timedelta(days=1), time(9, 29), tzinfo=NY)
+    assert c.timeout > c.decision_time
+
+
+def test_overnight_after_down_needs_a_down_cash_session():
+    assert run_overnight("overnight_after_down", BASE, BASE) == []  # flat day
+    assert run_overnight("overnight_after_down", BASE, BASE + 5) == []  # up day
+    assert len(run_overnight("overnight_after_down", BASE, BASE - 5)) == 1

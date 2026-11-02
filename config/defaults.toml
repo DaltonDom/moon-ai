@@ -440,3 +440,59 @@ tom_days_after = 3
   [[setups.turn_of_month.rescue]]
   name = "stop_atr_1.0"
   stop_atr = 1.0
+
+# ---------------------------------------------------------------------------
+# Batch 3: overnight drift, pre-registered 2026-11-02 before any backtest.
+# Entry and exit are inside one CME trading day (18:00 to 17:00 New York),
+# and the firms only require being flat by 16:45 (docs/research/
+# prop-firm-rules-2026-11.md; to be confirmed in writing with the firm).
+#
+# A different first test for these time-of-day effects, fixed now: the
+# random-entry baseline is uninformative when the entry is one fixed minute
+# (random entries in that minute are the strategy itself). In its place, using
+# scripts/research/time_effect_check.py:
+#   1. mean net R per trade > 0, with a session-bootstrap 95% CI above 0;
+#   2. DSR > 0.95 and at least 100 trades (as before);
+#   3. still profitable with double slippage (as before);
+#   4. net positive in 2022, the bear year, so it isn't only market beta.
+# Then the same MES check, prop-firm bar and one holdout look as batch 1.
+
+[setups.overnight_hold]
+title = "Overnight hold (18:01 to 09:29)"
+priority = 15
+window = "globex_reopen"
+entry_time = "18:01"
+timeout = "09:29"
+stop_atr = 1.0
+
+  [[setups.overnight_hold.rescue]]
+  name = "stop_atr_0.5"
+  stop_atr = 0.5
+
+[setups.overnight_after_down]
+title = "Overnight hold after a down cash session"
+priority = 16
+window = "globex_reopen"
+entry_time = "18:01"
+timeout = "09:29"
+stop_atr = 1.0
+after_down = true
+
+  [[setups.overnight_after_down.rescue]]
+  name = "stop_atr_0.5"
+  stop_atr = 0.5
+
+[setups.euro_open_drift]
+title = "European-open drift (02:00 to 03:30)"
+priority = 17
+window = "euro_open"
+entry_time = "02:00"
+timeout = "03:30"
+stop_atr = 0.25
+
+  [[setups.euro_open_drift.rescue]]
+  name = "after_down"
+  after_down = true
+  [[setups.euro_open_drift.rescue]]
+  name = "stop_atr_0.5"
+  stop_atr = 0.5

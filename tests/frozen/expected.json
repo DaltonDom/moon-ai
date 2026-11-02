@@ -1,5 +1,101 @@
 {
  "setups": {
+  "euro_open_drift": {
+   "candidates": [
+    {
+     "candidate_id": "euro_open_drift:2026-10-19T06:00:00+00:00:long",
+     "entry": null,
+     "status": "taken",
+     "stop": 29696.5,
+     "tags": [],
+     "target": 30848.75
+    },
+    {
+     "candidate_id": "euro_open_drift:2026-10-20T06:00:00+00:00:long",
+     "entry": null,
+     "status": "taken",
+     "stop": 29489.0,
+     "tags": [],
+     "target": 30715.5
+    },
+    {
+     "candidate_id": "euro_open_drift:2026-10-21T06:00:00+00:00:long",
+     "entry": null,
+     "status": "taken",
+     "stop": 29717.0,
+     "tags": [],
+     "target": 30987.5
+    },
+    {
+     "candidate_id": "euro_open_drift:2026-10-22T06:00:00+00:00:long",
+     "entry": null,
+     "status": "taken",
+     "stop": 29427.75,
+     "tags": [],
+     "target": 30714.75
+    },
+    {
+     "candidate_id": "euro_open_drift:2026-10-23T06:00:00+00:00:long",
+     "entry": null,
+     "status": "taken",
+     "stop": 29010.25,
+     "tags": [],
+     "target": 30385.25
+    }
+   ],
+   "trades": [
+    {
+     "candidate_id": "euro_open_drift:2026-10-19T06:00:00+00:00:long",
+     "entry_price": 29801.75,
+     "entry_time": "2026-10-19T06:01:00+00:00",
+     "exit_price": 29766.75,
+     "exit_reason": "timeout",
+     "exit_time": "2026-10-19T07:31:00+00:00",
+     "net_usd": -144.0,
+     "r": -0.342043
+    },
+    {
+     "candidate_id": "euro_open_drift:2026-10-20T06:00:00+00:00:long",
+     "entry_price": 29601.0,
+     "entry_time": "2026-10-20T06:01:00+00:00",
+     "exit_price": 29637.25,
+     "exit_reason": "timeout",
+     "exit_time": "2026-10-20T07:31:00+00:00",
+     "net_usd": 141.0,
+     "r": 0.314732
+    },
+    {
+     "candidate_id": "euro_open_drift:2026-10-21T06:00:00+00:00:long",
+     "entry_price": 29833.25,
+     "entry_time": "2026-10-21T06:01:00+00:00",
+     "exit_price": 29917.5,
+     "exit_reason": "timeout",
+     "exit_time": "2026-10-21T07:31:00+00:00",
+     "net_usd": 333.0,
+     "r": 0.716129
+    },
+    {
+     "candidate_id": "euro_open_drift:2026-10-22T06:00:00+00:00:long",
+     "entry_price": 29544.5,
+     "entry_time": "2026-10-22T06:01:00+00:00",
+     "exit_price": 29491.25,
+     "exit_reason": "timeout",
+     "exit_time": "2026-10-22T07:31:00+00:00",
+     "net_usd": -217.0,
+     "r": -0.464668
+    },
+    {
+     "candidate_id": "euro_open_drift:2026-10-23T06:00:00+00:00:long",
+     "entry_price": 29135.25,
+     "entry_time": "2026-10-23T06:01:00+00:00",
+     "exit_price": 29174.25,
+     "exit_reason": "timeout",
+     "exit_time": "2026-10-23T07:31:00+00:00",
+     "net_usd": 152.0,
+     "r": 0.304
+    }
+   ]
+  },
   "gap_fill": {
    "candidates": [
     {
@@ -774,6 +870,35 @@
     }
    ]
   },
+  "overnight_after_down": {
+   "candidates": [
+    {
+     "candidate_id": "overnight_after_down:2026-10-18T22:01:00+00:00:long",
+     "entry": null,
+     "status": "skipped:size",
+     "stop": 28933.5,
+     "tags": [],
+     "target": 33534.25
+    },
+    {
+     "candidate_id": "overnight_after_down:2026-10-19T22:01:00+00:00:long",
+     "entry": null,
+     "status": "skipped:size",
+     "stop": 29319.0,
+     "tags": [],
+     "target": 34219.5
+    },
+    {
+     "candidate_id": "overnight_after_down:2026-10-22T22:01:00+00:00:long",
+     "entry": null,
+     "status": "skipped:size",
+     "stop": 28623.5,
+     "tags": [],
+     "target": 34118.0
+    }
+   ],
+   "trades": []
+  },
   "overnight_breakout": {
    "candidates": [
     {
@@ -851,6 +976,51 @@
      "r": -1.014
     }
    ]
+  },
+  "overnight_hold": {
+   "candidates": [
+    {
+     "candidate_id": "overnight_hold:2026-10-18T22:01:00+00:00:long",
+     "entry": null,
+     "status": "skipped:size",
+     "stop": 28933.5,
+     "tags": [],
+     "target": 33534.25
+    },
+    {
+     "candidate_id": "overnight_hold:2026-10-19T22:01:00+00:00:long",
+     "entry": null,
+     "status": "skipped:size",
+     "stop": 29319.0,
+     "tags": [],
+     "target": 34219.5
+    },
+    {
+     "candidate_id": "overnight_hold:2026-10-20T22:01:00+00:00:long",
+     "entry": null,
+     "status": "skipped:size",
+     "stop": 29491.75,
+     "tags": [],
+     "target": 34568.25
+    },
+    {
+     "candidate_id": "overnight_hold:2026-10-21T22:01:00+00:00:long",
+     "entry": null,
+     "status": "skipped:size",
+     "stop": 29481.75,
+     "tags": [],
+     "target": 34616.0
+    },
+    {
+     "candidate_id": "overnight_hold:2026-10-22T22:01:00+00:00:long",
+     "entry": null,
+     "status": "skipped:size",
+     "stop": 28623.5,
+     "tags": [],
+     "target": 34118.0
+    }
+   ],
+   "trades": []
   },
   "turn_of_month": {
    "candidates": [],

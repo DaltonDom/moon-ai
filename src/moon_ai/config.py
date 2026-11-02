@@ -63,6 +63,9 @@ def _default_windows() -> dict[str, Window]:
         # Batch 2:
         "rth_midday": _w("10:30", "14:01"),
         "rth_reversion": _w("10:30", "15:01"),
+        # Batch 3 (overnight; the trading day runs 18:00 to 17:00):
+        "globex_reopen": _w("18:01", "18:02"),
+        "euro_open": _w("02:00", "02:01"),
     }
 
 
