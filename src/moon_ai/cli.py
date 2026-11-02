@@ -155,7 +155,9 @@ def _parser() -> argparse.ArgumentParser:
     pf = sub.add_parser(
         "propfirm", help="replay a backtest run through a prop firm's rules: pass rate, payouts"
     )
-    pf.add_argument("run", type=Path, help="a run folder under data/runs")
+    pf.add_argument(
+        "run", type=Path, nargs="+", help="run folder(s); double-slippage re-runs are skipped"
+    )
     pf.add_argument("--firm", action="append", help="rule set name (default: every firm)")
     pf.add_argument(
         "--risk",
@@ -179,14 +181,20 @@ def _propfirm(args: argparse.Namespace) -> int:
             f"refused: no rule set {', '.join(unknown)}; have {', '.join(firms)}", file=sys.stderr
         )
         return 2
-    if not (args.run / "run.json").exists():
-        print(f"refused: {args.run} is not a backtest run folder", file=sys.stderr)
-        return 2
-    trades = trades_from_run(args.run, load_config(args.config))
-    print(f"{args.run.name}: {len(trades)} trades")
-    for n in names:
-        print()
-        print("\n".join(lines(score(trades, firms[n], tuple(args.risk)), firms[n])))
+    from moon_ai.journal import decode_json, read_run
+
+    for run in args.run:
+        if not (run / "run.json").exists():
+            print(f"refused: {run} is not a backtest run folder", file=sys.stderr)
+            return 2
+        notes = decode_json(read_run(run, "runs"), "runs")[0]["notes"] or {}
+        if notes.get("stress"):
+            continue
+        trades = trades_from_run(run, load_config(args.config))
+        print(f"{run.name}: {len(trades)} trades")
+        for n in names:
+            print()
+            print("\n".join(lines(score(trades, firms[n], tuple(args.risk)), firms[n])))
     return 0
 
 

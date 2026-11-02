@@ -42,3 +42,35 @@ Fifteen versions ran in total. With five families and 15 versions, about 0.4 fal
    - **Passes** if net R after costs is above 0 and the edge over random entries (point estimate) is above 0.
    - The prop-firm replay over that year is reported, but one year is too short to judge pass rates.
 4. **If all pass:** 3 months of paper trading in the nightly replay, then the go-live bar in `design.md`.
+
+## Check 1 result: prop-firm replay (2026-11-02), not passed
+
+MNQ default run, 869 trades. At each risk per trade:
+
+| Plan | $200 | $300 | $400 | $500 |
+|---|---|---|---|---|
+| LucidFlex 50K (the bar) | 36% pass, 446 days; 63% blown; +$8/mo | 62%, 267 d; 100% blown; +$52 | 39%, 108 d; 100%; +$95 | 40%, 84 d; 100%; +$185 |
+| LucidPro 50K | 36%, 287 d; 18% blown; payouts $21/mo | 63%; 79% | 41%; 78% | 46%, 57 d; 76%; $183/mo |
+| Tradeify Growth 50K | 36%, 287 d; 18% blown; +$8/mo | 58%; 78%; +$15 | 37%; 81%; +$31 | 45%, 55 d; 71%; +$97 |
+| Tradeify Select (Flex) | 83% blown; −$22/mo | 100%; −$12 | 100%; −$124 | 100%; −$51 |
+| Tradeify Select (Daily) | 18%; −$5/mo | 89%; −$18 | 100%; +$2 | 100%; +$156 |
+
+**Verdict against the pre-registered bar:** the bar was under 50% blown within a year with positive net a month, in the LucidFlex 50K replay. **No risk level clears it.** At $200, net is positive but 63% of accounts blow. Larger risks blow every account.
+
+Tradeify Growth at $200 technically meets both numbers, but it is not the pre-registered plan, and +$8 a month after 287 days to pass is not income.
+
+**Why it fails:** the edge is real but small (about +0.13R per trade), and it trades about every other day. Against a $2,000 trailing drawdown:
+- A size big enough to reach $3,000 in reasonable time takes drawdowns that end accounts.
+- A size small enough to survive takes over a year to pass and pays almost nothing.
+
+The prop-firm rules need a higher return per unit of risk, and steadier days.
+
+## What next
+
+Our version simplified the published strategy (Zarattini, Aziz & Barbon 2024) in three ways. Each likely costs return per unit of risk:
+
+1. The paper **trails the stop** at the stricter of the noise boundary and VWAP, checked at each half hour. Ours holds a fixed stop at the anchor all day.
+2. The paper **re-enters** at later checkpoints after an exit. Ours trades at most once a day.
+3. The paper sizes by recent volatility. Ours uses a fixed dollar risk, which the replay then re-sizes.
+
+A round 2 for this setup should implement the paper's own rules, not new ideas. It also needs trailing-stop support in the simulated broker. Separately, the pre-registered MES check (check 2) still runs, to tell whether the edge carries over to another market at all.
