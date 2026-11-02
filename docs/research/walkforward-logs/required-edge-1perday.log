@@ -1,0 +1,10 @@
+warning: The `UV_NATIVE_TLS` environment variable is deprecated and will be removed in a future release. Use `UV_SYSTEM_CERTS` instead.
+per-day=1 target=2.0R paths=300 accounts=3 (income = 3 x one slot, copy-traded)
+edge R plan                        risk  median $/mo  p10 $/mo  P(>=2k)  P(6/8 q) evals/yr
+  0.00 lucidflex_50k                600          302      -258       5%        4%     11.4
+  0.05 lucidflex_50k                600          706      -120      17%       11%     10.9
+  0.10 tradeify_growth_50k          600        1,435        -7      35%       21%      8.0
+  0.15 tradeify_growth_50k          600        2,588       463      62%       42%      6.2
+  0.20 tradeify_growth_50k          600        4,084     1,470      82%       65%      4.5
+  0.30 tradeify_select_flex_50k     800        7,373     1,930      90%       67%      5.1
+  0.40 tradeify_select_flex_50k     600       10,714     6,993     100%       98%      2.9

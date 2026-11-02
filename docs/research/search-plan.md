@@ -72,3 +72,13 @@ No strategy built from 1-minute price and volume bars reaches the bar under hone
 - **Order-flow data** (Databento `mbp-1` or `tbbo`): the bid/ask, trade aggressor, and order-book imbalance. It needs a priced purchase and the user's OK.
 - **Longer history** (NQ/ES 2010–2019): it would let an edge be proven over more market regimes. The user declined it earlier.
 - **Forward testing:** one live evaluation, worst case the fee.
+
+## Search 3 (2026-11-02, later): outside research and the edge the goal needs
+
+See `strategy-search-3.md`.
+- **No public strategy or AI model is proven.** No published intraday rule or open forecasting model (Kronos, Chronos, TimesFM and others) has out-of-sample trading results after costs.
+- **The goal needs about +0.15R a trade at one trade a day**, after costs, or about +0.05–0.10R with two independent trades a day.
+- **Two untested ideas are built and pre-registered:**
+  - same-half-hour periodicity (`periodicity.py`);
+  - Kronos zero-shot (`kronos_test.py`).
+  - Both are waiting for data: run them on the Mac, or after a Databento top-up.
