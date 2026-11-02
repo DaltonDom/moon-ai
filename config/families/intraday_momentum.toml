@@ -1,0 +1,88 @@
+# Pre-registration: intraday momentum ("noise area"), MNQ.
+#
+# Written and committed 2026-11-02 BEFORE any backtest of this family ran on
+# our data. The commit that adds this file is the pre-registration record.
+# Changing any value below after the first run is a new trial and must be
+# logged as one.
+#
+# Source: Zarattini, Aziz & Barbon (2024), "Beat the Market: An Effective
+# Intraday Momentum Strategy for S&P500 ETF (SPY)", SSRN 4824172. Rules are
+# transcribed from the paper's base version and applied to MNQ's regular
+# trading hours. Where the paper is silent or our engine rules differ, the
+# choice is marked ADAPTED.
+#
+# Why this family: docs/research/why-losing.md, cause 5. Stop runs tend to
+# continue a move, not reverse it, and the intraday-momentum literature
+# (Gao et al. 2018; Zarattini et al. 2024) is the best-evidenced public edge
+# that fits an intraday index-futures bot. Its rules were never fitted to
+# our data.
+
+[family]
+name = "intraday_momentum"
+title = "Intraday momentum (noise area)"
+symbol = "MNQ.v.0"
+n_trials = 1  # this default is trial 1 of this family; no other trial is registered
+
+[rules]
+# Regular trading hours, New York time.
+session_open = "09:30"
+# Noise area at minute t of the session:
+#   sigma(t) = mean over the previous `lookback_days` full sessions of
+#              |close(t) / session_open_price - 1|
+#   upper(t) = max(open, previous session close) * (1 + band_mult * sigma(t))
+#   lower(t) = min(open, previous session close) * (1 - band_mult * sigma(t))
+lookback_days = 14
+band_mult = 1.0
+# Decisions only at these times, on the close of the 1-minute bar ending then.
+# Fills are market orders at the open of the next bar.
+first_decision = "10:00"
+last_decision = "15:30"
+decision_every_minutes = 30
+# Flat: close > upper -> long; close < lower -> short.
+# Long:  exit when close < max(upper, session VWAP); short mirrors with lower.
+# After an exit, the same decision may open the opposite side (paper rule).
+trailing_stop = "max(band, vwap)"
+# ADAPTED: the paper exits at the 16:00 close; we exit at market on the open
+# of the 15:55 bar, the repo's standard time-out, to stay inside flat_by.
+final_exit = "15:55"
+# VWAP from 09:30, typical price (high + low + close) / 3 weighted by volume.
+
+[sizing]
+# Paper: shares = equity * min(max_leverage, target_daily_vol / sigma_daily) / price.
+# sigma_daily = std of the last `vol_lookback_days` session close-to-close returns.
+# ADAPTED: fixed $50,000 equity (no compounding), contracts rounded down, at least 1.
+equity_usd = 50000
+target_daily_vol = 0.02
+max_leverage = 4.0
+vol_lookback_days = 14
+
+[costs]
+# The repo's broker defaults (src/moon_ai/config.py, BrokerConfig).
+commission_per_contract_side = 1.00
+slippage_ticks_per_market_fill = 1
+stress_slippage_multiplier = 2.0
+
+[calendar]
+# The repo's standard skips (src/moon_ai/data/calendar.py): no trades on
+# holidays, half days, contract-roll days or Databento-degraded days.
+# New entries are blocked at a decision inside a news blackout
+# (data_public/news_events.csv); exits are not.
+skip_non_regular_days = true
+news_blackout_blocks_entries = true
+
+[sample]
+# In-sample only. The locked holdout (2025-11-01 to 2026-11-01) is not touched.
+start = "2019-06-03"
+end = "2025-11-01"  # exclusive
+
+[bar]
+# Go-forward bar for this family (design.md "Setup testing protocol",
+# adapted to a strategy without a fixed stop, so results are in USD):
+# 1. Edge over random entries: same entry and exit times with a random side.
+#    A random side's expected P&L is minus the costs, so the edge per trade is
+#    the gross P&L; its bootstrap 95% CI must sit above zero.
+# 2. DSR > 0.95 on daily net returns, counting n_trials.
+# 3. At least 100 trades.
+# 4. Still profitable with double slippage.
+min_trades = 100
+dsr_bar = 0.95
