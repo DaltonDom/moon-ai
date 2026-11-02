@@ -62,6 +62,7 @@ class Market:
     tradable: np.ndarray  # bool: no roll, full session, warm ATR
     tick: float
     point_value: float
+    v: np.ndarray | None = None  # (days, 390) volume, 0 where no trade
 
 
 def load(
@@ -90,11 +91,13 @@ def load(
     on = df.filter(pl.col("m") < 0)
     on_hl = on.group_by("tday").agg(pl.col("high").max(), pl.col("low").min())
     on_map = {r[0]: (r[1], r[2]) for r in on_hl.iter_rows()}
-    days, opens, highs, lows, closes, inst = [], [], [], [], [], []
+    days, opens, highs, lows, closes, inst, vols = [], [], [], [], [], [], []
     for (d,), g in rth.group_by(["tday"], maintain_order=True):
         if g.height < min_bars:
             continue  # half days and broken sessions (thin markets skip quiet minutes)
         idx = g["m"].to_numpy()
+        vol = np.zeros(RTH_MIN)
+        vol[idx] = g["volume"].to_numpy()
         arr = {}
         for col in ("open", "high", "low", "close"):
             a = np.full(RTH_MIN, np.nan)
@@ -114,6 +117,7 @@ def load(
         highs.append(arr["high"])
         lows.append(arr["low"])
         closes.append(arr["close"])
+        vols.append(vol)
         inst.append(g["instrument_id"][0])
     o_, h_, l_, c_ = (np.array(x) for x in (opens, highs, lows, closes))
     n = len(days)
@@ -150,6 +154,7 @@ def load(
         tradable,
         spec.tick_size,
         spec.point_value,
+        np.array(vols),
     )
 
 

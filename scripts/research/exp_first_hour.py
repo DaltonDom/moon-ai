@@ -171,9 +171,117 @@ def fixed_business() -> int:
     return 0
 
 
+def equity_filter(det: screen.Detail, lookback: int = 60) -> screen.Detail:
+    """Keep a trade only if the signal's previous `lookback` trades (all of them,
+    taken or not) summed to more than 0R. Uses only trades closed before the day."""
+    r = det.r
+    out = screen.Detail(
+        *(
+            a.copy()
+            for a in (det.r, det.pnl, det.risk, det.worst, det.best, det.entry_min, det.exit_min)
+        )
+    )
+    past: list[float] = []
+    for i in range(len(r)):
+        if np.isnan(r[i]):
+            continue
+        ok = len(past) >= lookback and sum(past[-lookback:]) > 0
+        if not ok:
+            for a in (out.r, out.pnl, out.risk, out.worst, out.best, out.entry_min, out.exit_min):
+                a[i] = np.nan
+        past.append(float(r[i]))
+    return out
+
+
+def relative_volume(mk: screen.Market, m: int = 60, days: int = 20) -> np.ndarray:
+    """First-hour volume against its average over the previous `days` sessions."""
+    fv = mk.v[:, :m].sum(1)
+    out = np.full(len(fv), np.nan)
+    for i in range(days, len(fv)):
+        prev = fv[i - days : i].mean()
+        out[i] = fv[i] / prev if prev else np.nan
+    return out
+
+
+def honest_wf(steady: float = 0.5) -> int:
+    """Every choice inside the walk-forward: filter, target, equity filter, plan, risk."""
+    mnq = screen.load("MNQ.v.0")
+    mes, m2k, mym = (
+        screen.load(f"{r}.v.0", 380 if r == "MES" else 250) for r in ("MES", "M2K", "MYM")
+    )
+    plans = {k: with_daily_cap(v, 1000) for k, v in load_rules().items() if v.eval_fee}
+    risks = (200.0, 300.0, 400.0, 500.0, 600.0, 700.0, 800.0)
+    n, m = len(mnq.days), 60
+    base = np.sign(first_hour(mnq, m))
+    gap = np.sign(mnq.o[:, 0] - mnq.prev_close)
+    rng = (mnq.h[:, :m].max(1) - mnq.lo[:, :m].min(1)) / mnq.atr
+    rvol = relative_volume(mnq, m)
+    filters = {
+        "none": base,
+        "breadth3": np.where(agree_count(mnq, [mes, m2k, mym], m) >= 3, base, 0),
+        "breadthMES": np.where(agree_count(mnq, [mes], m) >= 1, base, 0),
+        "gap_agree": np.where(gap == base, base, 0),
+        "gap_disagree": np.where(gap == -base, base, 0),
+        "range_hi": np.where(rng > 0.4, base, 0),
+        "range_lo": np.where(rng < 0.4, base, 0),
+        "rvol_hi": np.where(rvol > 1.2, base, 0),
+        "rvol_lo": np.where(rvol < 0.8, base, 0),
+        "rvol_hi_breadth3": np.where(
+            (rvol > 1.2) & (agree_count(mnq, [mes, m2k, mym], m) >= 3), base, 0
+        ),
+    }
+    menu = []
+    for fname, side in filters.items():
+        for tgt in (1.5, 2.0, 3.0):
+            det = screen.simulate_detail(mnq, side, np.full(n, m), 0.25 * mnq.atr, tgt)
+            menu.append((f"{fname} t={tgt}", det))
+            menu.append((f"{fname} t={tgt} +equity", equity_filter(det)))
+    print(f"menu: {len(menu)} versions x {len(plans)} plans x {len(risks)} risks; steady={steady}")
+    oos = []
+    for q in range(wf.N_QUARTERS):
+        lo = wf.add_months(wf.FIRST_TEST, 3 * q)
+        hi = wf.add_months(lo, 3)
+        tr = wf.add_months(lo, -12)
+        months = wf.months_between(tr, lo)
+        best = (0.0, None, None, 0.0)
+        for name, det in menu:
+            c = wf.Candidate(name, mnq.symbol, det, mnq.days)
+            for plan in plans.values():
+                for risk in risks:
+                    net_m = wf.monthly(wf.business(wf.day_list([c], tr, lo, plan, risk)), months)
+                    v = sum(net_m) / len(months) - steady * float(np.std(net_m))
+                    if v > best[0]:
+                        best = (v, c, plan, risk)
+        v, c, plan, risk = best
+        if c is None:
+            print(f"Q{q + 1} {lo}: sit out")
+            oos += wf.day_list([], lo, hi, None, 0.0)
+            continue
+        print(
+            f"Q{q + 1} {lo}: {c.name} | {plan.name} ${risk:.0f} (tuning score {v:,.0f})", flush=True
+        )
+        oos += wf.day_list([c], lo, hi, plan, risk)
+    led = wf.business(oos, wf.MONTHLY_EVAL_BUDGET / 3)
+    months = wf.months_between(wf.FIRST_TEST, wf.add_months(wf.FIRST_TEST, 24))
+    total = [x * 3 for x in wf.monthly(led, months)]
+    qn = [sum(total[3 * q : 3 * q + 3]) for q in range(8)]
+    avg = sum(total) / 24
+    print(
+        f"untouched: ${avg:,.0f}/mo, {sum(x > 0 for x in qn)}/8 | "
+        f"{' '.join(f'{x:+.0f}' for x in qn)}"
+    )
+    print(f"evals {led.evals} passed {led.passes} blown {led.funded_blown}")
+    ok = avg >= 2000 and sum(x > 0 for x in qn) >= 6
+    print(f"verdict: {'MEETS THE BAR (honest walk-forward)' if ok else 'not a winner'}")
+    return 0
+
+
 if __name__ == "__main__":
     if "--breadth" in sys.argv:
         sys.exit(breadth_grid())
     if "--fixed-business" in sys.argv:
         sys.exit(fixed_business())
+    if "--honest" in sys.argv:
+        st = float(sys.argv[sys.argv.index("--honest") + 1]) if len(sys.argv) > 2 else 0.5
+        sys.exit(honest_wf(st))
     sys.exit(main())

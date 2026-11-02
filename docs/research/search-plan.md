@@ -32,3 +32,24 @@
 - **Next:**
   1. A regime or equity-curve filter: trade only while the signal's own trailing results are positive. Judge it walk-forward on research data first.
   2. Strategies whose rules are chosen *without* hindsight filters. In walk-forward, the filter choice must also come from each tuning window.
+
+## Honest walk-forward of the first-hour family (2026-11-02)
+
+**Method** (`exp_first_hour.py --honest STEADY`): every choice is made inside each 12-month tuning window, with nothing chosen by hindsight. The menu was:
+- the filter: none, breadth3, breadthMES, gap agree, gap disagree, range high/low, relative volume high/low, and relative volume high with breadth3
+- the target: 1.5, 2 or 3R
+- the equity-curve filter, on or off
+- the plan, from 4
+- the risk, $200–800
+
+**Results:**
+
+| Steady weight | Average a month (3 accounts) | Profitable quarters |
+|---|---|---|
+| 0 | +$206 | 3 of 8 |
+| 0.5 | −$211 | 2 of 8 |
+| 1.0 | +$144 | 1 of 8 (mostly sat out) |
+
+- The volume filters were never chosen.
+- breadth3 was chosen in only 1 quarter. This confirms that the earlier breadth "winner" was a hindsight pick.
+- **Conclusion:** with all choices made honestly, the first-hour family makes about $0–200 a month. It doesn't reach the bar.
