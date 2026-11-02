@@ -165,3 +165,20 @@ In order of expected value per dollar:
 ## 6. Kronos: not run in the cloud
 
 The network policy blocks huggingface.co, where the model weights live. It runs on the Mac with the commands in section 3, or here once huggingface.co is added to the environment's allowed domains.
+
+## 7. Pre-registered: order-book imbalance (2026-11-02, before any book data was bought)
+
+This is the first test that uses information the 1-minute bars don't have: contracts resting at the best bid against the best offer. The data is Databento `bbo-1m`, the top of the book sampled each minute. It costs $0.88 for MNQ from 2024-01 to 2025-10, so about $3 per symbol for 2019–2025. `tbbo` ($742) and `trades` ($53 for 3 months) were priced and **not** bought.
+
+The rules are fixed in `scripts/research/book_imbalance.py`:
+- **Signal:** the mean imbalance, (bid − ask) / (bid + ask), over the last 5 snapshots.
+- **Decisions:** every 15 minutes from 09:45 to 15:30.
+- **Direction:** long above the 80th percentile of the previous 60 days, short below the 20th.
+- **Exit:** after 15 minutes, with a stop at 0.25 ATR.
+- **Two versions:**
+  - the full-size contract's book (NQ or ES);
+  - the micro's own book (MNQ or MES).
+
+**Pass bar:** the same as sections 3 and 5, with about 316 versions now counted. The script also prints the raw correlation, so "no information" can be told apart from "costs ate it".
+
+**Plumbing check** (fixture data, made-up book data): a planted signal is found (+0.86R a trade), and pure noise isn't (−0.09R a trade, which is the costs).
