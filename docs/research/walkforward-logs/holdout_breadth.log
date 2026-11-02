@@ -1,0 +1,20 @@
+MNQ days in the year: 248; trades 107
+mean net R per trade -0.061; total -6.5R; win rate 39%
+month       net (3 accounts)
+  2025-11        -435
+  2025-12           0
+  2026-01        -435
+  2026-02        -435
+  2026-03        -435
+  2026-04        -435
+  2026-05        -435
+  2026-06           0
+  2026-07        -435
+  2026-08        -435
+  2026-09        -435
+  2026-10           0
+quarters: -870 -1,305 -870 -870; year net -3,915 ($-326/month)
+evaluations 9, passed 1, funded blown 1
+  ✕ mean net R per trade > 0
+  ✕ business net over the year > 0 after fees
+verdict: FAILS the clean check

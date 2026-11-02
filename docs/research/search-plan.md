@@ -24,3 +24,11 @@
 2. **Trade management:** stop to breakeven after +1R; take half at 1R; a time stop. These raise the win rate and smooth equity, which suits the trailing drawdown and consistency rules.
 3. **Confirmation from other indices:** trade MNQ only when MES, M2K and MYM agree on the first-hour direction (breadth).
 4. **More decisions a day in the same direction:** add 11:30 and 12:30 checks as adds or re-entries.
+
+## Update (2026-11-02, later)
+
+- **Breadth-confirmed first-hour momentum on MNQ** cleared the bar on Nov 2023 – Oct 2025, with hindsight choices. Then it **failed the clean check** on Nov 2025 – Oct 2026: −0.061R per trade and −$326 a month. It is retired. See `candidate-breadth-first-hour.md`.
+- **Two holdout-year looks are spent** (the noise breakout and the breadth candidate), and both lost. Every further look at that year is a little less clean. Paper trading, or a live evaluation, on data from Nov 2026 onward is the only fully fresh test left.
+- **Next:**
+  1. A regime or equity-curve filter: trade only while the signal's own trailing results are positive. Judge it walk-forward on research data first.
+  2. Strategies whose rules are chosen *without* hindsight filters. In walk-forward, the filter choice must also come from each tuning window.

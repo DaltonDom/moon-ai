@@ -32,3 +32,18 @@
 - The $2k a month and 6-of-8 numbers are reported, but a single year includes the start-up quarters, so they don't decide.
 - **If it passes:** confirm in the event engine with news blackouts, then one live Tradeify Growth evaluation.
 - **If it fails:** the candidate is retired.
+
+## Clean check result (2026-11-02): FAILED, candidate retired
+
+This was one look, logged in the cloud session's `data/holdout_checks.jsonl` as `breadth_first_hour / candidate-v1 / MNQ.v.0`. The data for Nov 2025 – Oct 2026 (MNQ, MES, M2K, MYM; $5.98) was bought for this check.
+
+| | Value |
+|---|---|
+| Trades | 107 |
+| Mean net R per trade | **−0.061** (win rate 39%) |
+| Business, 3 accounts, Tradeify Growth, $600 | **−$3,915** for the year (−$326 a month). 9 evaluations, 1 passed, 1 funded account blown |
+| Quarters | −870, −1,305, −870, −870 |
+
+Both pre-registered tests fail.
+
+**Lesson:** the second strategy in a row that looked good on 2019–2025 has lost in Nov 2025 – Oct 2026. The noise breakout failed there too. Selecting on the research years, including the hindsight choices recorded above, again found patterns that didn't persist. The broad plateau over plan and risk didn't protect against this, because the plateau was across the *business layer*. The signal itself was the hindsight pick (the best of 11 filter experiments).

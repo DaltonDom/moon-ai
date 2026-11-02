@@ -7,7 +7,7 @@ Every row is walk-forward:
 
 | Rank | Strategy | Avg/month (3 accts) | Profitable quarters | Best quarter | Notes |
 |---|---|---|---|---|---|
-| **★** | **Breadth-confirmed first-hour momentum, MNQ** (all four index micros agree at 10:30), Tradeify Growth, $600 per trade fixed | **+$2,308** | **6 of 8** | +$16,200 | meets the bar on these quarters, with hindsight caveats. See `candidate-breadth-first-hour.md`. The clean check is pending. |
+| ✕ | **Breadth-confirmed first-hour momentum, MNQ** (FAILED the clean check: −$326 a month on Nov 2025 – Oct 2026) (all four index micros agree at 10:30), Tradeify Growth, $600 per trade fixed | **+$2,308** | **6 of 8** | +$16,200 | meets the bar on these quarters, with hindsight caveats. See `candidate-breadth-first-hour.md`. The clean check is pending. |
 | **1** | **First-hour momentum on MNQ only**: at 10:30 trade the first hour's direction; stop 0.25 ATR; target 2R; risk up to $1,000 tuned per quarter; our $1,000 daily cap | **+$1,079** | 4 of 8 | +$13,691 | `--markets MNQ --fixed "time_mom m=60 th=0.0 k=0.25 t=2.0" --daily-cap 1000` |
 | 2 | Same, no daily cap | +$914 | 4 of 8 | +$13,691 | |
 | 3 | Same rule, no target (held to 15:55) | +$813 | 2 of 8 | +$21,165 | |
