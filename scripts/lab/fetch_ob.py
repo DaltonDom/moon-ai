@@ -3,8 +3,8 @@ import json, os, sys, datetime
 import databento as db
 out = sys.argv[1]
 c = db.Historical(os.environ['DATABENTO_API_KEY'])
-plan = [('bbo-1s','NQ.v.0','2025-05-01','2025-11-01'), ('bbo-1s','ES.v.0','2025-05-01','2025-11-01'),
-        ('tbbo','NQ.v.0','2025-08-18','2025-11-01')]
+plan = [('bbo-1s','NQ.v.0','2025-05-01','2025-11-01'), ('bbo-1s','ES.v.0','2025-07-01','2025-11-01'),
+        ('tbbo','NQ.v.0','2025-10-13','2025-11-01')]
 for sch, sym, s, e in plan:
     path = f"{out}/{sym}_{sch}_{s}_{e}.dbn.zst"
     if os.path.exists(path):

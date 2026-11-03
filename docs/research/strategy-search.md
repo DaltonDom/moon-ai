@@ -129,3 +129,31 @@ order-flow imbalance (Cont, Kukanov and Stoikov 2014) finds the predicted move
 is a fraction of a tick, which helps passive (limit-order) traders and market
 makers but is smaller than the cost of a retail market order. Lucid also bans
 HFT and microscalping (more than 50% of profit from trades held 5 seconds or less).
+
+### Trial 9 - order-book data (bought 2026-11-03, $32.66)
+
+After the user raised Databento's $45 monthly usage limit (which, not the
+credit, had blocked Trial 8) the reduced package was bought. Ledger:
+`docs/research/strategy-search-databento-ledger.jsonl`.
+
+- NQ bbo-1s 2025-05-01 to 2025-10-31 (134 RTH days), ES bbo-1s 2025-07-01 to
+  2025-10-31, NQ tbbo (every trade, with aggressor side and top of book)
+  2025-10-13 to 2025-10-31 (4.3M RTH trades).
+- Execution: market orders fill at the next second's ask/bid and exit by
+  crossing the spread again; NQ mini, $5 commission a round trip. Mean RTH
+  spread 0.73 points.
+
+**bbo-1s (train May-Aug or Jul-Aug, test Sep-Oct).** Univariate monthly ICs of
+top-of-book imbalance, last-trade flow, NQ momentum and ES lead (5-30 s) against
+NQ's next 10 s-5 min mid change: -0.018 to +0.014, no stable sign. LightGBM on
+all of them: test IC 0.00-0.017. Every threshold loses $9-71 per trade.
+
+**tbbo (train 13-22 Oct, test 23-31 Oct).** Signed aggressor volume, large-lot
+flow, trade counts, imbalance. The one consistent effect is a small short-term
+*reversal* (60 s return and signed flow vs next 15-60 s: IC -0.03 to -0.04).
+That is worth about 0.2 points a trade, against about 1 point of spread and
+commission. Model test IC -0.014 to +0.014; every threshold loses $2-28 per trade.
+
+Verdict: the order book holds no edge a retail market-order bot can use. What
+is there is a fraction of the spread, useful only to passive liquidity
+providers with queue priority (and Lucid bans HFT/microscalping). Dead.
