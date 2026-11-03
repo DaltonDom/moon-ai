@@ -1,6 +1,6 @@
 # Intraday momentum (noise area) on MNQ: first backtest, 2026-11-02
 
-**Verdict: go-forward on the in-sample bar.** This is the first strategy to clear all four checks. The holdout hasn't been looked at yet.
+**Verdict: passed in-sample, failed the holdout sign-off on statistical strength while staying profitable.** It was the first strategy to clear all four in-sample checks. Its one holdout look (2026-11-03) was profitable but didn't clear the bar; see [Holdout sign-off](#holdout-sign-off-2026-11-03).
 
 The rules were pre-registered in [`config/families/intraday_momentum.toml`](../../config/families/intraday_momentum.toml) and committed before any run. They come from Zarattini, Aziz & Barbon (2024), "Beat the Market: An Effective Intraday Momentum Strategy for S&P500 ETF (SPY)". None of them was tuned on our data. This document reports the single default run (trial 1 of 1) and some diagnostics that changed no rule.
 
@@ -76,6 +76,26 @@ The firm-rules simulator from the design isn't built yet. This is a stand-in usi
 
 At 1 micro, about three in four evaluations pass, but the median pass takes about three months of monthly fees. Bigger size passes faster and fails more often. The best size needs the real rule set, including fees and the consistency rule.
 
+## Holdout sign-off (2026-11-03)
+
+This was the one allowed look at 2025-11-01 to 2026-11-01, with the pre-registered default unchanged. It is recorded in `data/holdout_checks.jsonl` in the data repo.
+
+| Check | Holdout | In-sample | Bar | Pass |
+|---|---|---|---|---|
+| Trades | 200 | 1,381 | ≥ 100 | ✅ |
+| Edge over random (gross $/trade, 95% CI) | +$22.8 (−$18.9 to +$66.5) | +$44.8 (+$24.2 to +$66.2) | CI above 0 | ❌ |
+| DSR | 0.82 | 1.00 | > 0.95 | ❌ |
+| Net with double slippage | +$3,562 | +$45,655 | > 0 | ✅ |
+
+- **Overall:** net +$3,811 (Sharpe 0.91, profit factor 1.20, win rate 42%, max drawdown $4,548). With one contract it's +$3,925 (Sharpe 1.12, max drawdown $2,652).
+- **Average size was lower:** 1.3 contracts, against 2.8 in-sample, because the year was more volatile.
+- **Longs and shorts were both positive:** +$1,374 and +$2,437.
+- **Prop replay (same UNVERIFIED 25K rules):** 45% pass at 1 micro (median 22 sessions), 40% at 2 micros, 31% at 3 micros.
+
+**Reading.** The strategy made money on unseen data, and the edge kept its sign at about half the in-sample size. One year of about 200 trades is too little to prove that statistically: with the in-sample spread of trade results (std ≈ $400), the 95% CI on 200 trades is about ±$55. Even the full in-sample edge of $45 per trade would usually fail this check on one year. That weakness was a property of the bar, known before the look, so it doesn't change the result. By the protocol, the strategy didn't clear the holdout.
+
+The bar must not be loosened after the fact. More evidence can only come from new data: forward paper trading, which is never seen in advance and adds to the record every day.
+
 ## Caveats
 
 - **The holdout hasn't been looked at.** The one sign-off look is the real out-of-sample test. The user decides when to spend it.
@@ -86,6 +106,6 @@ At 1 micro, about three in four evaluations pass, but the median pass takes abou
 
 ## Next steps
 
-1. Decide on the one holdout sign-off: `uv run python -m moon_ai.research.intraday_momentum --holdout-signoff`.
+1. ~~Holdout sign-off~~: done 2026-11-03. It failed the bar while staying profitable (above).
 2. Build the firm-rules replay for Lucid 50K with verified rules, and choose the size from it.
 3. Paper-trade it through the nightly replay before buying an evaluation.
