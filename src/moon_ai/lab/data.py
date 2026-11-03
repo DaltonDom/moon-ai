@@ -25,8 +25,8 @@ DATA_ROOT = Path(os.environ.get("MOON_AI_DATA", "/home/user/moon-ai-data/data/ba
 CACHE = Path(os.environ.get("MOON_AI_LAB_CACHE", "/tmp/moon-ai-lab-cache"))
 N_MIN = 1380
 
-POINT_VALUE = {"MNQ": 2.0, "MES": 5.0, "MYM": 0.5, "M2K": 5.0, "MGC": 10.0, "MCL": 100.0}
-TICK = {"MNQ": 0.25, "MES": 0.25, "MYM": 1.0, "M2K": 0.1, "MGC": 0.1, "MCL": 0.01}
+POINT_VALUE = {"MNQ": 2.0, "MES": 5.0, "MYM": 0.5, "M2K": 5.0, "MGC": 10.0, "MCL": 100.0, "M6E": 12500.0}
+TICK = {"MNQ": 0.25, "MES": 0.25, "MYM": 1.0, "M2K": 0.1, "MGC": 0.1, "MCL": 0.01, "M6E": 0.0001}
 
 
 def m(hh: int, mm: int = 0) -> int:
