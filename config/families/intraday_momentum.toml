@@ -86,3 +86,24 @@ end = "2025-11-01"  # exclusive
 # 4. Still profitable with double slippage.
 min_trades = 100
 dsr_bar = 0.95
+
+# ---------------------------------------------------------------------------
+# Trial 2, "prop_v2": pre-registered 2026-11-03 BEFORE it ran, after the
+# default's holdout look. It adds the risk controls a prop account needs;
+# every entry and exit rule above is unchanged. The values come from
+# reasoning, not from any backtest:
+# - Hard stop at 0.5 x the 14-day daily volatility from entry. That sits
+#   outside the noise area at most times of day, so it only catches a move
+#   the 30-minute check would miss. Fills at the stop (or the bar's open if
+#   it gaps through) with the repo's 3 ticks of stop slippage.
+# - Daily stop: no new entries once the session's realised loss reaches
+#   2 x that per-trade risk.
+# - Fixed size: the same number of micros every day, chosen per account in
+#   the firm replay (a risk choice, reported as a table), not by volatility.
+# The locked holdout was spent on the default, so this trial has no clean
+# holdout; its forward test is the evaluation itself.
+[trial.prop_v2]
+stop_sigma_mult = 0.5
+daily_stop_risk_mult = 2.0
+stop_slippage_ticks = 3
+sizing = "fixed_micros"
