@@ -108,3 +108,24 @@ A zero-edge strategy tops out near 40% pass, however it is sized.
 Everything tested on 1-minute OHLCV from the 7 CME micros at realistic costs
 lands at 0.00-0.07 out of sample: 5-10x short. Ideas that look better in-sample
 do not survive walk-forward selection (Trial 3).
+
+### Trial 8 - order-book data (blocked by Databento credit)
+
+The user approved buying order-book data. Quotes for one month of 2024 data:
+mbp-10 (10 levels) NQ $35 / 75 GB, ES $24; tbbo (trades + top of book) NQ $17;
+bbo-1s (top of book each second) NQ $2.1, ES $2.1. Planned feasibility sample:
+NQ+ES bbo-1s May-Oct 2025 plus NQ tbbo 18 Aug-31 Oct 2025, $62 in total.
+
+Databento refused with `402 account_insufficient_funds`: the $125 credit is
+used up (earlier bar downloads plus other research pulls). Under $1 was left;
+it bought one day of NQ bbo-1s (2025-10-27, $0.10), used to build and smoke-test
+the pipeline (`src/moon_ai/lab/orderbook.py`).
+
+One-day smoke test (not evidence, too small): median NQ spread 0.5 points
+(2 ticks) during RTH, so crossing the spread in and out costs about $10 plus
+$5 commission per mini, about 0.75 points. Top-of-book imbalance's correlation
+with the next 5 s-5 min mid change: -0.002 to -0.014. The literature on
+order-flow imbalance (Cont, Kukanov and Stoikov 2014) finds the predicted move
+is a fraction of a tick, which helps passive (limit-order) traders and market
+makers but is smaller than the cost of a retail market order. Lucid also bans
+HFT and microscalping (more than 50% of profit from trades held 5 seconds or less).
