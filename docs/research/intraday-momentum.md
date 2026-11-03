@@ -109,3 +109,41 @@ The bar must not be loosened after the fact. More evidence can only come from ne
 1. ~~Holdout sign-off~~: done 2026-11-03. It failed the bar while staying profitable (above).
 2. Build the firm-rules replay for Lucid 50K with verified rules, and choose the size from it.
 3. Paper-trade it through the nightly replay before buying an evaluation.
+
+## Trial 2, "prop_v2": prop risk controls (2026-11-03)
+
+Pre-registered in `config/families/intraday_momentum.toml` before it ran. The entry and exit rules are unchanged. It adds:
+
+- a hard stop at 0.5 × the 14-day daily volatility from entry, checked on every bar, with 3 ticks of stop slippage;
+- a daily stop: no new entries once the session's realised loss reaches 2 × that per-trade risk;
+- a fixed size of 1 micro, scaled in the replay.
+
+Run with `uv run python -m moon_ai.research.intraday_momentum --trial prop_v2`. It is in-sample only: the holdout was spent on the default.
+
+| Check (1 MNQ, 2019-06 to 2025-10) | Result | Pass |
+|---|---|---|
+| Trades | 1,381 | ✅ |
+| Edge over random (gross $/trade, 95% CI) | +$7.4 to +$26.9 | ✅ |
+| DSR (2 trials counted) | 1.00 | ✅ |
+| Net with double slippage | +$17,170 | ✅ |
+
+- **Overall:** net +$18,679 per contract, Sharpe 1.16, max drawdown $1,800.
+- **By year:** every full year is positive (2020–2025: +$2.7k to +$3.7k per contract).
+- **Exits:** 128 trades hit the hard stop.
+- **Cost of the stop:** it costs about 10% of per-contract profit against the default ($20,852). In exchange it caps any single trade's loss, which a prop account needs.
+
+### LucidFlex 50K replay
+
+The rules are from secondary sources and **UNVERIFIED**: $3,000 target, $2,000 end-of-day trailing max loss locking at start + $100, 40% consistency in the evaluation, minimum 2 days, no daily loss limit. An evaluation was started on every session. A pass opens a funded account, followed for 6 months. Breaches are checked against intraday lows.
+
+| Micros | Pass rate | Median sessions to pass | Funded bust within 6 months | Funded median 6-month profit |
+|---|---|---|---|---|
+| 1 | 100%* | 216 (~10 months) | 0% | $1,101 |
+| 2 | 66% | 108 (~5 months) | 17% | $2,915 |
+| 3 | 39% | 57 | 44% | $3,675 |
+| 4 | 35% | 45 | 47% | $2,106 |
+| 5 | 27% | 38 | 62% | $85 |
+
+\*At 1 micro, evaluations started late in the sample never finish and aren't counted, so the 100% is optimistic.
+
+**Reading.** The edge is real but modest, so size is the main decision. 2 micros gives the best balance: two in three evaluations pass, in about 5 months, and most funded accounts survive. Larger sizes pass faster but bust much more often. Payouts and the 90/10 split aren't modelled.

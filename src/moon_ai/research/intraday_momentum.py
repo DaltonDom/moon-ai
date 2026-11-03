@@ -73,6 +73,12 @@ class Spec:
     point_value: float = 2.0  # USD per point per contract
     # Diagnostics only, never a trial: fill this many bars late (0 = next bar).
     fill_delay: int = 0
+    # Trial 2 ("prop_v2") risk controls; None/off in the default.
+    stop_sigma_mult: float | None = None  # hard stop at this x daily vol x entry price
+    daily_stop_risk_mult: float | None = None  # no new entries after this x per-trade risk lost
+    stop_slippage_ticks: float = 3.0
+    fixed_contracts: int | None = None  # fixed size instead of volatility targeting
+    trial: str = "default"
     start: date = date(2019, 6, 3)
     end: date = date(2025, 11, 1)
 
@@ -82,8 +88,22 @@ class Spec:
         return list(range(self.first_decision, self.last_decision + 1, self.every))
 
 
-def load_spec(path: Path = SPEC_PATH) -> Spec:
+def load_spec(path: Path = SPEC_PATH, trial: str = "default") -> Spec:
     raw = tomllib.loads(Path(path).read_text())
+    if trial != "default":
+        t = raw.get("trial", {}).get(trial)
+        if t is None:
+            raise ValueError(f"no pre-registered trial {trial!r} in {path}")
+        base = load_spec(path)
+        return replace(
+            base,
+            trial=trial,
+            n_trials=base.n_trials + len(raw["trial"]),
+            stop_sigma_mult=t["stop_sigma_mult"],
+            daily_stop_risk_mult=t["daily_stop_risk_mult"],
+            stop_slippage_ticks=t["stop_slippage_ticks"],
+            fixed_contracts=1 if t["sizing"] == "fixed_micros" else None,
+        )
     r, s, c, smp, bar = raw["rules"], raw["sizing"], raw["costs"], raw["sample"], raw["bar"]
     return Spec(
         lookback_days=r["lookback_days"],
@@ -234,38 +254,70 @@ def trade_day(
     spec: Spec,
     blocked: Sequence[bool] | None = None,
     slippage_mult: float = 1.0,
+    vol: float | None = None,
 ) -> list[Trade]:
     """Run the noise-area rules over one session.
 
     `blocked[i]` is True when decision i (spec.decisions order) falls in a
-    news blackout; it blocks new entries only.
+    news blackout; it blocks new entries only. With `spec.stop_sigma_mult`
+    set (trial 2), every position also has a hard stop checked on each bar,
+    and `spec.daily_stop_risk_mult` ends new entries after a bad session.
     """
     o = day.session_open
     upper = max(o, prev_close) * (1 + spec.band_mult * sigma)
     lower = min(o, prev_close) * (1 - spec.band_mult * sigma)
     vwap = day.vwap()
     slip = spec.slippage_ticks * slippage_mult * spec.tick
+    stop_slip = spec.stop_slippage_ticks * slippage_mult * spec.tick
+    stops = spec.stop_sigma_mult is not None and vol is not None
+    if stops and spec.fill_delay:
+        raise ValueError("fill_delay is a diagnostic of the default only")
+    dist = spec.stop_sigma_mult * vol * o if stops else None  # stop distance, points
     trades: list[Trade] = []
-    pos, entry_k = 0, -1
+    pos, entry_k, stop_px, scan_from = 0, -1, 0.0, 0
+    realized, halted = 0.0, False
+    d, last = spec.fill_delay, SESSION_MINUTES - 1
 
-    def close_out(exit_k: int, reason: str) -> None:
-        d, last = spec.fill_delay, SESSION_MINUTES - 1
-        entry_px = float(day.open[min(entry_k + d, last)])
-        exit_px = float(day.open[min(exit_k + d, last)])
+    def close_out(exit_k: int, reason: str, exit_raw: float | None = None) -> None:
+        nonlocal realized, halted
+        e = min(entry_k + d, last)
+        entry_px = float(day.open[e])
+        if exit_raw is None:  # market exit at the open of bar exit_k
+            x = min(exit_k + d, last)
+            exit_px, exit_slip, held = float(day.open[x]), slip, slice(e, max(x, e + 1))
+        else:  # stop exit inside bar exit_k
+            exit_px, exit_slip, held = exit_raw, stop_slip, slice(e, exit_k + 1)
         gross = pos * (exit_px - entry_px) * spec.point_value * qty
-        cost = qty * (2 * spec.commission + 2 * slip * spec.point_value)
-        e, x = min(entry_k + d, last), min(exit_k + d, last)
-        held = slice(e, max(x, e + 1))
+        cost = qty * (2 * spec.commission + (slip + exit_slip) * spec.point_value)
         if pos == 1:
             adverse = float(day.low[held].min()) - entry_px
         else:
             adverse = entry_px - float(day.high[held].max())
         mae = min(adverse, 0.0) * spec.point_value * qty - cost
-        trades.append(
-            Trade(day.day, pos, qty, entry_k, exit_k, entry_px, exit_px, gross, cost, reason, mae)
-        )
+        t = Trade(day.day, pos, qty, entry_k, exit_k, entry_px, exit_px, gross, cost, reason, mae)
+        trades.append(t)
+        realized += t.net_usd
+        if stops and spec.daily_stop_risk_mult is not None:
+            risk = dist * spec.point_value * qty
+            halted = halted or realized <= -spec.daily_stop_risk_mult * risk
+
+    def check_stop(until: int) -> bool:
+        """Bars [scan_from, until): close at the hard stop if one is touched."""
+        if not (stops and pos):
+            return False
+        for m in range(scan_from, until):
+            if pos == 1 and day.low[m] <= stop_px:
+                close_out(m, "stop", min(float(day.open[m]), stop_px))
+                return True
+            if pos == -1 and day.high[m] >= stop_px:
+                close_out(m, "stop", max(float(day.open[m]), stop_px))
+                return True
+        return False
 
     for i, k in enumerate(spec.decisions):
+        if check_stop(k):
+            pos = 0
+        scan_from = k
         c = day.close[k - 1]  # the bar ending at minute k
         exited = 0
         if pos == 1 and c < max(upper[k - 1], vwap[k - 1]):
@@ -274,10 +326,14 @@ def trade_day(
         elif pos == -1 and c > min(lower[k - 1], vwap[k - 1]):
             close_out(k, "trail")
             exited, pos = -1, 0
-        if pos == 0 and not (blocked is not None and blocked[i]):
+        if pos == 0 and not halted and not (blocked is not None and blocked[i]):
             side = 1 if c > upper[k - 1] else -1 if c < lower[k - 1] else 0
             if side and side != exited:
                 pos, entry_k = side, k
+                if stops:
+                    stop_px = float(day.open[k]) - side * dist
+    if pos and check_stop(spec.final_exit):
+        pos = 0
     if pos:
         close_out(spec.final_exit, "time_out")
     return trades
@@ -339,11 +395,11 @@ def backtest(
                         if prev.instrument == day.instrument
                         else day.session_open
                     )
-                    qty = contracts(spec, day.session_open, vol)
+                    qty = spec.fixed_contracts or contracts(spec, day.session_open, vol)
                     blocked = None
                     if blackout is not None:
                         blocked = [blackout.in_blackout(_utc(day.day, k)) for k in spec.decisions]
-                    t = trade_day(day, sigma, prev_close, qty, spec, blocked, slippage_mult)
+                    t = trade_day(day, sigma, prev_close, qty, spec, blocked, slippage_mult, vol)
                     trades += t
                     daily[day.day] = sum((x.net_usd for x in t), 0.0)
                     qtys[day.day] = qty
@@ -431,7 +487,7 @@ def score(res: Result, stress: Result, spec: Spec) -> dict[str, Any]:
         "long": {"trades": len(longs), "net_usd": sum(t.net_usd for t in longs)},
         "short": {"trades": len(shorts), "net_usd": sum(t.net_usd for t in shorts)},
         "exit_reasons": {
-            r: sum(1 for t in tr if t.exit_reason == r) for r in ("trail", "time_out")
+            r: sum(1 for t in tr if t.exit_reason == r) for r in ("trail", "stop", "time_out")
         },
         "skipped_sessions": res.skipped,
         "by_year": dict(sorted(years.items())),
@@ -511,6 +567,81 @@ def replay_evals(
     }
 
 
+@dataclass(frozen=True)
+class LucidRules:
+    """LucidFlex 50K, from secondary sources (UNVERIFIED; checked 2026-11-03):
+    $3,000 target, $2,000 end-of-day trailing max loss whose floor stops rising
+    at start + $100, 40% consistency in the evaluation (best day <= 40% of the
+    profit at the pass), no daily loss limit, 40 micros max; the funded account
+    keeps the trailing max loss and drops the consistency rule."""
+
+    name: str = "LucidFlex 50K (UNVERIFIED)"
+    target_usd: float = 3_000.0
+    max_loss_usd: float = 2_000.0
+    floor_lock_usd: float = 100.0
+    consistency: float = 0.40
+    min_days: int = 2
+    max_micros: int = 40
+
+
+def _account(x: np.ndarray, w: np.ndarray, s: int, rules: LucidRules, funded: bool):
+    """Walk one account from session s. Returns (outcome, sessions used, balance, best day)."""
+    bal, peak, best = 0.0, 0.0, 0.0
+    for i in range(s, len(x)):
+        floor = min(peak - rules.max_loss_usd, rules.floor_lock_usd)
+        if bal + w[i] <= floor or bal + x[i] <= floor:
+            return "bust", i - s + 1, bal + x[i], best
+        bal += x[i]
+        best = max(best, x[i])
+        peak = max(peak, bal)
+        enough = bal >= rules.target_usd and i - s + 1 >= rules.min_days
+        if not funded and enough and best <= rules.consistency * bal:
+            return "pass", i - s + 1, bal, best
+    return "open", len(x) - s, bal, best
+
+
+def replay_lucid(
+    per_contract_daily: Sequence[float],
+    per_contract_worst: Sequence[float],
+    micros: int,
+    rules: LucidRules | None = None,
+    funded_sessions: int = 126,
+) -> dict[str, Any]:
+    """An evaluation started on every session, then (on a pass) a funded account
+    from the next session for `funded_sessions` sessions (126 = about 6 months).
+    Payouts aren't modelled: the funded figure is the account's profit before
+    withdrawals and the 90/10 split."""
+    rules = rules or LucidRules()
+    if micros > rules.max_micros:
+        raise ValueError(f"{micros} micros is above the {rules.max_micros} allowed")
+    x = np.asarray(per_contract_daily, float) * micros
+    w = np.asarray(per_contract_worst, float) * micros
+    passed, busted, days, funded_bust, funded_pnl = 0, 0, [], 0, []
+    for s in range(len(x)):
+        out, n, _, _ = _account(x, w, s, rules, funded=False)
+        if out == "bust":
+            busted += 1
+        elif out == "pass":
+            passed += 1
+            days.append(n)
+            f0 = s + n
+            if f0 + funded_sessions <= len(x):
+                xs, ws = x[f0 : f0 + funded_sessions], w[f0 : f0 + funded_sessions]
+                fout, _, fbal, _ = _account(xs, ws, 0, rules, funded=True)
+                funded_bust += fout == "bust"
+                funded_pnl.append(fbal)
+    done = passed + busted
+    nf = len(funded_pnl)
+    return {
+        "micros": micros,
+        "evaluations": done,
+        "pass_rate": passed / done if done else 0.0,
+        "median_sessions_to_pass": float(np.median(days)) if days else None,
+        "funded_bust_within_6m": funded_bust / nf if nf else None,
+        "funded_median_6m_profit_usd": float(np.median(funded_pnl)) if nf else None,
+    }
+
+
 # --- entry point ----------------------------------------------------------------------
 
 
@@ -523,7 +654,7 @@ def run(
 ) -> dict[str, Any]:
     start, end = spec.start, spec.end
     if signoff:
-        holdout.sign_off("intraday_momentum", "default", start, end)
+        holdout.sign_off("intraday_momentum", spec.trial, start, end)
     else:
         holdout.guard(start, end)
     store = BarStore(store_root)
@@ -555,6 +686,10 @@ def run(
     summary["prop_replay"] = {
         "rules": asdict(rules),
         "by_size": [replay_evals(per_contract, m, rules, worst) for m in (1, 2, 3, 5)],
+        "lucid_50k": {
+            "rules": asdict(LucidRules()),
+            "by_size": [replay_lucid(per_contract, worst, m) for m in (1, 2, 3, 4, 5, 6, 8)],
+        },
         "by_size_close_only": [replay_evals(per_contract, m, rules) for m in (1, 2, 3, 5)],
     }
     summary["spec"] = {k: str(v) for k, v in asdict(spec).items()}
@@ -579,10 +714,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     p.add_argument("--store", type=Path, default=Path("data/bars"))
     p.add_argument("--out", type=Path, default=Path("data/runs/intraday_momentum"))
     p.add_argument("--holdout-signoff", action="store_true")
+    p.add_argument("--trial", default="default", help="a pre-registered trial, e.g. prop_v2")
     p.add_argument("--symbol", help="cross-check on another market (diagnostics only)")
     p.add_argument("--fill-delay", type=int, default=0, help="diagnostics only")
     args = p.parse_args(argv)
-    spec = load_spec()
+    spec = load_spec(trial=args.trial)
     if args.holdout_signoff:
         spec = replace(spec, start=holdout.HOLDOUT_START, end=holdout.HOLDOUT_END)
     if args.symbol:
@@ -594,7 +730,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         spec = replace(spec, fill_delay=args.fill_delay)
     diag = args.symbol or args.fill_delay
     stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%S")
-    tag = "holdout" if args.holdout_signoff else "diagnostic" if diag else "default"
+    tag = "holdout" if args.holdout_signoff else "diagnostic" if diag else spec.trial
     if args.holdout_signoff and diag:
         p.error("a sign-off runs the pre-registered default only")
     s = run(spec, args.store, args.out / f"{tag}.{stamp}", signoff=args.holdout_signoff)

@@ -130,3 +130,56 @@ def test_research_runs_refuse_the_holdout(tmp_path: Path):
     spec = M.Spec(start=date(2025, 6, 1), end=date(2026, 1, 1))
     with pytest.raises(holdout.HoldoutLocked):
         M.run(spec, tmp_path, tmp_path / "out")
+
+
+STOPS = M.Spec(stop_sigma_mult=0.5, daily_stop_risk_mult=2.0, fixed_contracts=1)
+
+
+def test_trial_prop_v2_loads_its_risk_controls():
+    spec = M.load_spec(trial="prop_v2")
+    assert (spec.stop_sigma_mult, spec.daily_stop_risk_mult) == (0.5, 2.0)
+    assert spec.fixed_contracts == 1 and spec.n_trials == 2
+    assert spec.lookback_days == M.load_spec().lookback_days  # entry rules unchanged
+    with pytest.raises(ValueError):
+        M.load_spec(trial="nope")
+
+
+def test_the_hard_stop_fills_inside_the_bar_with_stop_slippage():
+    path = flat()
+    path[25:] = 101.0
+    path[40:] = 99.0  # bar 39 trades 101 -> 99 through a stop at 101 - 0.5 * 0.02 * 100 = 100
+    (t,) = M.trade_day(session(path), np.full(N, 0.001), 100.0, 1, STOPS, vol=0.02)
+    assert t.exit_reason == "stop" and t.exit_minute == 39
+    assert t.exit_px == 100.0  # the stop price, since the bar opened above it
+    assert t.cost_usd == pytest.approx(2 * 1.0 + (0.25 + 3 * 0.25) * 2.0)
+
+
+def test_without_a_stop_the_same_session_rides_to_the_next_check():
+    path = flat()
+    path[25:] = 101.0
+    path[40:] = 99.0
+    t = M.trade_day(session(path), np.full(N, 0.001), 100.0, 1, SPEC, vol=0.02)[0]
+    assert t.exit_reason == "trail" and t.exit_minute == 60
+
+
+def test_the_daily_stop_blocks_new_entries_after_two_risk_units():
+    path = flat()
+    path[25:] = 101.0
+    path[40:] = 98.0  # long stopped out for ~3 points, risk 1 point: halted
+    trades = M.trade_day(session(path), np.full(N, 0.001), 100.0, 1, STOPS, vol=0.02)
+    assert [t.exit_reason for t in trades] == ["stop"]  # no short at 10:30
+
+
+def test_lucid_replay_applies_the_consistency_rule():
+    rules = M.LucidRules(target_usd=100.0, max_loss_usd=1000.0, min_days=1)
+    one_big_day = M.replay_lucid([150.0, 0.0, 0.0], [0.0, 0.0, 0.0], 1, rules)
+    assert one_big_day["evaluations"] == 0  # 150 > 40% of 150: can't pass on that day alone
+    steady = M.replay_lucid([40.0] * 6, [0.0] * 6, 1, rules)
+    assert steady["pass_rate"] == 1.0 and steady["median_sessions_to_pass"] == 3.0
+
+
+def test_lucid_floor_stops_rising_at_the_lock():
+    rules = M.LucidRules(target_usd=10_000.0, max_loss_usd=100.0, floor_lock_usd=10.0)
+    # Up 500, then a 400 drop: the floor locked at +10, so +100 left is safe.
+    r = M.replay_lucid([500.0, -400.0], [0.0, -400.0], 1, rules)
+    assert r["evaluations"] == 0 or r["pass_rate"] == 0.0
