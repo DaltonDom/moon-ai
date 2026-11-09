@@ -54,3 +54,20 @@ The look is logged in [holdout_checks.jsonl](prop-search/holdout_checks.jsonl) a
 - Together with rounds 1 and 2, 83 versions have now been tried on MNQ and none survives. A few hundredths of an R per trade, which is what the best in-sample families show, is too small for 12 months (~240 trades) to tell from noise. It also didn't hold up out of sample.
 - Passing a prop evaluation is not evidence of an edge. A coin flip with the same stops passes Topstep 50K in 12–24% of starts, because a $3,000 target against a $2,000 trailing loss is close to a fair bet. Anyone quoting a backtest "pass" without that baseline is reporting luck.
 - Per design.md, "nothing passed" is a valid answer and the bar is not lowered. The bot should not trade any of these.
+
+## Addendum: all 24 fitted to the holdout (at the user's request, 2026-11-09)
+
+After the sign-off failed, the user asked for whatever works on the past 12 months alone, so all 24 configurations were run on 2025-11-01 to 2026-11-01. **This is a fit, not a test.** The holdout is no longer clean for these 24, and no result below counts as validation.
+
+Even fitted to that year, none beats the coin flip by more than chance. The best by Topstep 50K pass rate was `orb_candle_m30_2R`:
+
+| | Value |
+|---|---|
+| Trades | 246 |
+| Mean R | +0.067 (+$1,334 per contract) |
+| Edge over coin flip | +0.048R (CI −0.08 to +0.17), p = 0.24 |
+| Topstep 50K pass rate | 39% (coin flip 25%, 95th percentile 54%) |
+| Halves | +0.22 / −0.08 |
+| 2019–2025 | +0.021R |
+
+Rows: [holdout-fit.MNQ.json](prop-search/holdout-fit.MNQ.json). The next clean test for any of these needs data from 2026-11-01 on.
