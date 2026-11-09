@@ -37,3 +37,23 @@ The random-walk check found that stop entries were filled at the level plus 1 ti
 - **Research** (2019-06 to 2025-10): the same go-forward bar as prop-search 1 (100+ trades, edge CI excludes 0, DSR > 0.95 over 29 trials, both halves > 0, both prop pass rates above the coin flip's 95th percentile). A configuration that clears everything but DSR may still go to the holdout as a finalist, named in `finalists-youtube.json` before the look, as in prop-search 1.
 - **Holdout** (2025-11 to 2026-11, one look, trial `prop-search-2`): the same four pass criteria as prop-search 1.
 - **Caveat.** These exact rules never saw the holdout. But I did see related ORB variants' holdout results (prop-search 1 addendum), so a pass on the 5-minute ORB rules is a little less independent than a clean one.
+
+## Result (run 2026-11-09)
+
+**None of the five passes. None goes to the holdout, so the holdout stays unseen by these rules.** Research window 2019-06 to 2025-10, MNQ, 1,594 days:
+
+| Configuration | Trades | Win rate | Mean R | Edge over coin flip (95% CI) | Topstep 50K pass (coin p95) |
+|---|---|---|---|---|---|
+| `yt_orr_50pct` | 334 | 66% | −0.090 | −0.042 (−0.113 to +0.026) | 0% (19%) |
+| `yt_orr_100pct` | 796 | 53% | −0.090 | −0.038 (−0.101 to +0.026) | 10% (24%) |
+| `yt_orb5_full_full` | 1,589 | 49% | −0.051 | −0.013 (−0.064 to +0.036) | 8% (24%) |
+| `yt_orb5_half_full` | 1,589 | 64% | −0.066 | −0.013 (−0.044 to +0.019) | 3% (13%) |
+| `yt_orb5_fvg_2R` | 874 | 29% | −0.222 | **−0.118 (−0.198 to −0.038)** | 3% (24%) |
+
+All five lose money after costs in both halves of the window, and none beats the coin flip. The ORB + FVG 2R setup does significantly *worse* than random direction. High win rates (64–66%) come with negative expectancy, because the losses are bigger than the wins. The videos' claimed results were a 5-trade manual replay ("100% win rate"), unstated numbers, and per-share stock EVs that don't survive futures costs.
+
+Rows: [research-youtube.MNQ.json](prop-search/research-youtube.MNQ.json).
+
+## Effect of the fill fix on prop-search 1
+
+The stop-entry configurations of prop-search 1 were re-scored with the corrected fill ([research-fixedfill.MNQ.json](prop-search/research-fixedfill.MNQ.json)). Every edge shrank by roughly 20–30%. `orb_break_m30_opp`'s edge fell from +0.066R to +0.056R (CI +0.003 to +0.110), and its Topstep pass rate fell from 37% to 32%. That is below the coin flip's 95th percentile (36%), so with correct fills it would not have been a finalist. Its holdout failure stands either way.

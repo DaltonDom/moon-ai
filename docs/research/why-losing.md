@@ -76,3 +76,7 @@ Per-trial report cards are in `data/runs/<setup>.<trial>.2019-06-01_2026-04-30.*
 ## Prop-search 1: non-ICT families (run 2026-11-09)
 
 24 non-ICT configurations (#102), scored against coin-flip twins and a prop-firm simulator. None cleared DSR. The best, a 30-minute opening-range breakout, then failed its one holdout look (−0.033R over 239 trades, no better than a coin flip). Details: [prop-search.md](prop-search.md).
+
+## Prop-search 2: strategies from YouTube (run 2026-11-09)
+
+Five configurations taken from three YouTube videos. All lost money on 2019-06 to 2025-10, and none beat the coin flip. One (5-minute ORB + FVG, 2R) did significantly worse than random direction. Nothing went to the holdout. Details: [prop-search-youtube.md](prop-search-youtube.md).

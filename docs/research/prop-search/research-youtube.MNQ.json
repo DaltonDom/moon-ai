@@ -1,0 +1,289 @@
+{
+ "meta": {
+  "symbol": "MNQ",
+  "window": [
+   "2019-06-01",
+   "2025-11-01"
+  ],
+  "days": 1594,
+  "trials": 29,
+  "var_trial_sharpe": 0.003781393975909695
+ },
+ "rows": [
+  {
+   "name": "yt_orr_50pct",
+   "family": "youtube_orr",
+   "trades": 334,
+   "win_rate": 0.6586826347305389,
+   "mean_r": -0.08980438235278143,
+   "coin_mean_r": -0.048444355942846164,
+   "coin_p": 0.8765,
+   "edge": -0.042428494458731855,
+   "edge_ci": [
+    -0.11309609903562061,
+    0.026032049882770053
+   ],
+   "sharpe_per_trade": -0.12682198749096987,
+   "mean_r_first_half": -0.07628931134032073,
+   "mean_r_second_half": -0.10268716934126737,
+   "usd_per_contract": -2475.5,
+   "exits": {
+    "stop": 103,
+    "target": 231,
+    "time": 0
+   },
+   "prop": {
+    "Topstep 50K Combine": {
+     "pass_rate": 0.0,
+     "resolved_pass_rate": 0.0,
+     "passed": 0,
+     "failed": 1322,
+     "open": 272,
+     "median_days_to_pass": NaN,
+     "coin_pass_rate": 0.04612923462986198,
+     "coin_pass_rate_p95": 0.1948870765370138
+    },
+    "LucidFlex 25K": {
+     "pass_rate": 0.0,
+     "resolved_pass_rate": 0.0,
+     "passed": 0,
+     "failed": 1316,
+     "open": 278,
+     "median_days_to_pass": NaN,
+     "coin_pass_rate": 0.05623588456712672,
+     "coin_pass_rate_p95": 0.22051442910915933
+    }
+   },
+   "dsr": 1.8179145568342214e-06,
+   "bar": {
+    "100+ trades": true,
+    "edge CI excludes 0": false,
+    "DSR > 0.95": false,
+    "both halves > 0": false,
+    "Topstep 50K Combine beats coin": false,
+    "LucidFlex 25K beats coin": false
+   },
+   "passes": false
+  },
+  {
+   "name": "yt_orr_100pct",
+   "family": "youtube_orr",
+   "trades": 796,
+   "win_rate": 0.5314070351758794,
+   "mean_r": -0.08964934657704923,
+   "coin_mean_r": -0.051784534043675924,
+   "coin_p": 0.8775,
+   "edge": -0.03813030328541157,
+   "edge_ci": [
+    -0.1008362837412275,
+    0.025547323613357157
+   ],
+   "sharpe_per_trade": -0.0889531408667473,
+   "mean_r_first_half": -0.046674787560293925,
+   "mean_r_second_half": -0.1317686904889935,
+   "usd_per_contract": -8000.0,
+   "exits": {
+    "stop": 356,
+    "target": 427,
+    "time": 13
+   },
+   "prop": {
+    "Topstep 50K Combine": {
+     "pass_rate": 0.09912170639899624,
+     "resolved_pass_rate": 0.10057288351368555,
+     "passed": 158,
+     "failed": 1413,
+     "open": 23,
+     "median_days_to_pass": 57.5,
+     "coin_pass_rate": 0.13249058971141783,
+     "coin_pass_rate_p95": 0.2441969887076537
+    },
+    "LucidFlex 25K": {
+     "pass_rate": 0.1273525721455458,
+     "resolved_pass_rate": 0.12987843889955214,
+     "passed": 203,
+     "failed": 1360,
+     "open": 31,
+     "median_days_to_pass": 44.0,
+     "coin_pass_rate": 0.1797427854454203,
+     "coin_pass_rate_p95": 0.30944165621079045
+    }
+   },
+   "dsr": 3.355255018266945e-09,
+   "bar": {
+    "100+ trades": true,
+    "edge CI excludes 0": false,
+    "DSR > 0.95": false,
+    "both halves > 0": false,
+    "Topstep 50K Combine beats coin": false,
+    "LucidFlex 25K beats coin": false
+   },
+   "passes": false
+  },
+  {
+   "name": "yt_orb5_full_full",
+   "family": "youtube_orb_bracket",
+   "trades": 1589,
+   "win_rate": 0.49150409062303335,
+   "mean_r": -0.05146062527718549,
+   "coin_mean_r": -0.036914474580220964,
+   "coin_p": 0.708,
+   "edge": -0.013462591878540374,
+   "edge_ci": [
+    -0.06362491015630864,
+    0.036253626854037053
+   ],
+   "sharpe_per_trade": -0.051126223781035054,
+   "mean_r_first_half": -0.06117117796528,
+   "mean_r_second_half": -0.04171333657639959,
+   "usd_per_contract": -8655.5,
+   "exits": {
+    "stop": 800,
+    "target": 775,
+    "time": 14
+   },
+   "prop": {
+    "Topstep 50K Combine": {
+     "pass_rate": 0.07967377666248432,
+     "resolved_pass_rate": 0.08104658583280153,
+     "passed": 127,
+     "failed": 1440,
+     "open": 27,
+     "median_days_to_pass": 33.0,
+     "coin_pass_rate": 0.1636825595984944,
+     "coin_pass_rate_p95": 0.24435382685069007
+    },
+    "LucidFlex 25K": {
+     "pass_rate": 0.11292346298619825,
+     "resolved_pass_rate": 0.11516314779270634,
+     "passed": 180,
+     "failed": 1383,
+     "open": 31,
+     "median_days_to_pass": 37.0,
+     "coin_pass_rate": 0.21490589711417815,
+     "coin_pass_rate_p95": 0.34811794228356335
+    }
+   },
+   "dsr": 7.312483951693594e-13,
+   "bar": {
+    "100+ trades": true,
+    "edge CI excludes 0": false,
+    "DSR > 0.95": false,
+    "both halves > 0": false,
+    "Topstep 50K Combine beats coin": false,
+    "LucidFlex 25K beats coin": false
+   },
+   "passes": false
+  },
+  {
+   "name": "yt_orb5_half_full",
+   "family": "youtube_orb_bracket",
+   "trades": 1589,
+   "win_rate": 0.6431718061674009,
+   "mean_r": -0.06572248305484633,
+   "coin_mean_r": -0.05294826812200808,
+   "coin_p": 0.7925,
+   "edge": -0.013188131430341065,
+   "edge_ci": [
+    -0.044218772712808135,
+    0.018757911534776312
+   ],
+   "sharpe_per_trade": -0.09017121552538232,
+   "mean_r_first_half": -0.06603399966655228,
+   "mean_r_second_half": -0.06540978794397881,
+   "usd_per_contract": -10284.0,
+   "exits": {
+    "stop": 566,
+    "target": 1022,
+    "time": 1
+   },
+   "prop": {
+    "Topstep 50K Combine": {
+     "pass_rate": 0.028230865746549563,
+     "resolved_pass_rate": 0.029239766081871343,
+     "passed": 45,
+     "failed": 1494,
+     "open": 55,
+     "median_days_to_pass": 89.0,
+     "coin_pass_rate": 0.05314303638644918,
+     "coin_pass_rate_p95": 0.13303011292346298
+    },
+    "LucidFlex 25K": {
+     "pass_rate": 0.05959849435382685,
+     "resolved_pass_rate": 0.061848958333333336,
+     "passed": 95,
+     "failed": 1441,
+     "open": 58,
+     "median_days_to_pass": 67.0,
+     "coin_pass_rate": 0.09215181932245925,
+     "coin_pass_rate_p95": 0.21555834378920952
+    }
+   },
+   "dsr": 0.0,
+   "bar": {
+    "100+ trades": true,
+    "edge CI excludes 0": false,
+    "DSR > 0.95": false,
+    "both halves > 0": false,
+    "Topstep 50K Combine beats coin": false,
+    "LucidFlex 25K beats coin": false
+   },
+   "passes": false
+  },
+  {
+   "name": "yt_orb5_fvg_2R",
+   "family": "youtube_orb_fvg",
+   "trades": 874,
+   "win_rate": 0.2929061784897025,
+   "mean_r": -0.22166288017378924,
+   "coin_mean_r": -0.10334386154579582,
+   "coin_p": 0.9965,
+   "edge": -0.1183929173527646,
+   "edge_ci": [
+    -0.19847855964899674,
+    -0.03806617149394049
+   ],
+   "sharpe_per_trade": -0.16336242109689203,
+   "mean_r_first_half": -0.18495883444702704,
+   "mean_r_second_half": -0.2595619413428182,
+   "usd_per_contract": -8928.5,
+   "exits": {
+    "stop": 617,
+    "target": 246,
+    "time": 11
+   },
+   "prop": {
+    "Topstep 50K Combine": {
+     "pass_rate": 0.029485570890840654,
+     "resolved_pass_rate": 0.029728020240354206,
+     "passed": 47,
+     "failed": 1534,
+     "open": 13,
+     "median_days_to_pass": 34.0,
+     "coin_pass_rate": 0.1563676286072773,
+     "coin_pass_rate_p95": 0.2401819322459222
+    },
+    "LucidFlex 25K": {
+     "pass_rate": 0.04015056461731493,
+     "resolved_pass_rate": 0.04053198226725776,
+     "passed": 64,
+     "failed": 1515,
+     "open": 15,
+     "median_days_to_pass": 25.5,
+     "coin_pass_rate": 0.1834818067754078,
+     "coin_pass_rate_p95": 0.2886449184441656
+    }
+   },
+   "dsr": 8.326672684688674e-16,
+   "bar": {
+    "100+ trades": true,
+    "edge CI excludes 0": false,
+    "DSR > 0.95": false,
+    "both halves > 0": false,
+    "Topstep 50K Combine beats coin": false,
+    "LucidFlex 25K beats coin": false
+   },
+   "passes": false
+  }
+ ]
+}
