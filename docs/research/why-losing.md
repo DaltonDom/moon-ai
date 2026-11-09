@@ -72,3 +72,7 @@ That is 59 versions in all, with no pass. By the rule written above, these mecha
 - **These runs saw Nov 2025 – Apr 2026,** now inside the locked holdout. No ICT setup will be re-run on the shorter window, because re-running adds trials without adding information.
 
 Per-trial report cards are in `data/runs/<setup>.<trial>.2019-06-01_2026-04-30.*` on the Mac.
+
+## Prop-search 1: non-ICT families (run 2026-11-09)
+
+24 non-ICT configurations (#102), scored against coin-flip twins and a prop-firm simulator. None cleared DSR. The best, a 30-minute opening-range breakout, then failed its one holdout look (−0.033R over 239 trades, no better than a coin flip). Details: [prop-search.md](prop-search.md).

@@ -182,6 +182,13 @@ def signoff(names, symbol="MNQ"):
         )
         row, r = score(days, cfgs[n], seed=100 + i)
         row["dsr_vs_zero"] = float(deflated_sharpe(r, 1, 0.0))  # one look: no deflation
+        # the double-slippage stress run is part of the same single look
+        import strategies
+
+        saved = strategies.ENTRY_SLIP, strategies.STOP_SLIP
+        strategies.ENTRY_SLIP, strategies.STOP_SLIP = 2 * saved[0], 2 * saved[1]
+        row["double_slippage"], _ = score(days, cfgs[n], seed=200 + i)
+        strategies.ENTRY_SLIP, strategies.STOP_SLIP = saved
         rows.append(row)
         print(json.dumps(row, indent=1))
     (OUT / f"holdout.{symbol}.json").write_text(

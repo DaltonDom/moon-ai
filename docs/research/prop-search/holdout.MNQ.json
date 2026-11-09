@@ -1,0 +1,103 @@
+{
+ "meta": {
+  "symbol": "MNQ",
+  "days": 246,
+  "window": [
+   "2025-11-01",
+   "2026-11-01"
+  ]
+ },
+ "rows": [
+  {
+   "name": "orb_break_m30_opp",
+   "family": "orb_break",
+   "trades": 239,
+   "win_rate": 0.4686192468619247,
+   "mean_r": -0.033148262415226795,
+   "coin_mean_r": -0.024925925662649884,
+   "coin_p": 0.558,
+   "edge": -0.005015245338308674,
+   "edge_ci": [
+    -0.12369747955083164,
+    0.11377657278697435
+   ],
+   "sharpe_per_trade": -0.03503075064952686,
+   "mean_r_first_half": 0.07716286092661023,
+   "mean_r_second_half": -0.14254012639588184,
+   "usd_per_contract": -3209.0,
+   "exits": {
+    "stop": 80,
+    "target": 0,
+    "time": 159
+   },
+   "prop": {
+    "Topstep 50K Combine": {
+     "pass_rate": 0.016260162601626018,
+     "resolved_pass_rate": 0.019801980198019802,
+     "passed": 4,
+     "failed": 198,
+     "open": 44,
+     "median_days_to_pass": 88.5,
+     "coin_pass_rate": 0.12182926829268294,
+     "coin_pass_rate_p95": 0.4351626016260162
+    },
+    "LucidFlex 25K": {
+     "pass_rate": 0.36585365853658536,
+     "resolved_pass_rate": 1.0,
+     "passed": 90,
+     "failed": 0,
+     "open": 156,
+     "median_days_to_pass": 68.5,
+     "coin_pass_rate": 0.04695121951219512,
+     "coin_pass_rate_p95": 0.36585365853658536
+    }
+   },
+   "dsr_vs_zero": 0.29712084179123,
+   "double_slippage": {
+    "name": "orb_break_m30_opp",
+    "family": "orb_break",
+    "trades": 239,
+    "win_rate": 0.4686192468619247,
+    "mean_r": -0.03712513306843736,
+    "coin_mean_r": -0.03360583448148362,
+    "coin_p": 0.5275,
+    "edge": -0.004977789977937612,
+    "edge_ci": [
+     -0.1228523883140497,
+     0.110659830204559
+    ],
+    "sharpe_per_trade": -0.039254263307989784,
+    "mean_r_first_half": 0.07296258070161418,
+    "mean_r_second_half": -0.14629544922373844,
+    "usd_per_contract": -3528.0,
+    "exits": {
+     "stop": 80,
+     "target": 0,
+     "time": 159
+    },
+    "prop": {
+     "Topstep 50K Combine": {
+      "pass_rate": 0.0040650406504065045,
+      "resolved_pass_rate": 0.0049504950495049506,
+      "passed": 1,
+      "failed": 201,
+      "open": 44,
+      "median_days_to_pass": 90.0,
+      "coin_pass_rate": 0.1341869918699187,
+      "coin_pass_rate_p95": 0.3823170731707317
+     },
+     "LucidFlex 25K": {
+      "pass_rate": 0.36585365853658536,
+      "resolved_pass_rate": 1.0,
+      "passed": 90,
+      "failed": 0,
+      "open": 156,
+      "median_days_to_pass": 68.5,
+      "coin_pass_rate": 0.04849593495934959,
+      "coin_pass_rate_p95": 0.36585365853658536
+     }
+    }
+   }
+  }
+ ]
+}
