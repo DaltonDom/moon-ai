@@ -5,8 +5,8 @@ when it enters, the side, the entry fill, a per-minute stop-level series (so a
 trailing stop is just a moving series), an optional target and a time exit.
 The simulator then walks the bars after entry.
 
-Fills follow the repo's cost model (config.py `CostModel`): market and
-stop-entry fills pay 1 tick, stop exits pay 3 ticks, targets are limit orders
+Fills follow the repo's cost model (config.py `CostModel`): market fills
+pay 1 tick, stop orders (entries and exits) pay 3 ticks, targets are limit orders
 that need a trade one tick through, commission is $1 per side. When a stop and
 a target are both inside one bar, the stop is assumed to fill first.
 
@@ -57,7 +57,11 @@ class Result:
 
 def mirror(t: Trade, tick: float) -> Trade:
     # The twin pays its own entry slippage, so its fill is 2 ticks off ours.
-    px = t.px - 2 * ENTRY_SLIP * tick * t.d
+    # A stop entry fills past the level after price has already run through
+    # it, so the twin trades at that same fill rather than back at the level
+    # (which would hand the original the overshoot). Market entries: the twin
+    # pays its own tick of slippage on the other side.
+    px = t.px if t.stop_entry else t.px - 2 * ENTRY_SLIP * tick * t.d
     stop = 2 * px - (t.stop + (px - t.px))
     target = 2 * px - (t.target + (px - t.px)) if not np.isnan(t.target) else np.nan
     return Trade(t.day, t.i, -t.d, px, stop, target, t.exit_i, t.stop_entry)
@@ -130,10 +134,10 @@ def _first_touch(days: Days, k: int, start: int, end: int, up: float, dn: float)
         return None
     if a < b:
         i = start + a
-        px = max(up, days.o[k, i]) + days.tick * ENTRY_SLIP
+        px = max(up, days.o[k, i]) + days.tick * STOP_SLIP
         return i, 1, px
     i = start + b
-    px = min(dn, days.o[k, i]) - days.tick * ENTRY_SLIP
+    px = min(dn, days.o[k, i]) - days.tick * STOP_SLIP
     return i, -1, px
 
 
@@ -366,3 +370,142 @@ def configs() -> list[Config]:
             )
         )
     return cs
+
+
+# ------------------------------------------- YouTube group (prop-search 2)
+# Rules as extracted from each video by Gemini on 2026-11-09 (notes in
+# docs/research/prop-search-youtube.md). Anything the video left open is
+# fixed here once, before any result, and noted.
+
+
+def _daily(days: Days):
+    """50-day SMA of RTH closes and 14-day ATR (true range incl. the gap
+    from the prior close), both from days before today. Unadjusted
+    continuous prices, so a roll adds a small jump."""
+    close = days.c[:, -1]
+    hi, lo = days.h.max(1), days.l.min(1)
+    prev = np.concatenate([[np.nan], close[:-1]])
+    tr = np.nanmax(np.stack([hi - lo, np.abs(hi - prev), np.abs(lo - prev)]), 0)
+    n = len(days)
+    sma, atr14 = np.full(n, np.nan), np.full(n, np.nan)
+    for k in range(50, n):
+        sma[k] = close[k - 50 : k].mean()
+    for k in range(14, n):
+        atr14[k] = tr[k - 14 : k].mean()
+    return sma, atr14
+
+
+def opening_range_reversal(days: Days, retrace: float) -> list[Trade]:
+    """The Rumers, 8vufTzGZqiI. Daily bias from today's open vs the 50-day
+    SMA. The opening move against the bias (open-session extreme to the
+    opposite extreme, from 09:30) must exceed 20% of daily ATR. On 5-minute
+    bars, after the move's extreme, the first candle closing in the bias
+    direction sets the trigger; a stop order one tick past its high (low)
+    enters. Stop at the low (high) of day; target `retrace` of the move.
+    Fixed here: setups by 10:30, entries by 11:00, flat at 15:59."""
+    sma, atr14 = _daily(days)
+    out = []
+    for k in range(len(days)):
+        if np.isnan(sma[k]) or np.isnan(atr14[k]):
+            continue
+        op = days.o[k, 0]
+        d = 1 if op > sma[k] else -1
+        o5 = days.o[k, :90].reshape(18, 5)[:, 0]
+        h5 = days.h[k, :90].reshape(18, 5).max(1)
+        l5 = days.l[k, :90].reshape(18, 5).min(1)
+        c5 = days.c[k, :90].reshape(18, 5)[:, -1]
+        # running extreme against the bias, through each 5-minute bar (to 10:30)
+        for b in range(1, 12):
+            ext = l5[: b + 1].min() if d > 0 else h5[: b + 1].max()
+            start = (
+                h5[: int(np.argmin(l5[: b + 1])) + 1].max()
+                if d > 0
+                else (l5[: int(np.argmax(h5[: b + 1])) + 1].min())
+            )
+            move = (start - ext) * d
+            at_ext = (l5[b] == ext) if d > 0 else (h5[b] == ext)
+            if at_ext or move < 0.2 * atr14[k]:
+                continue
+            if not ((c5[b] > o5[b]) if d > 0 else (c5[b] < o5[b])):
+                continue
+            trig = h5[b] + days.tick if d > 0 else l5[b] - days.tick
+            f = (
+                _first_touch(days, k, 5 * (b + 1), 90, trig, -np.inf)
+                if d > 0
+                else (_first_touch(days, k, 5 * (b + 1), 90, np.inf, trig))
+            )
+            if f is None or f[1] != d:
+                break
+            i, _, px = f
+            low_so_far = days.l[k, :i].min() if d > 0 else days.h[k, :i].max()
+            if (px - low_so_far) * d <= days.tick * 4:
+                break
+            tgt = low_so_far + d * retrace * abs(start - low_so_far)
+            if (tgt - px) * d <= 0:
+                break
+            out.append(Trade(k, i, d, px, _const(low_so_far), tgt, stop_entry=True))
+            break
+    return out
+
+
+def orb_bracket(days: Days, m: int, target_x: float, stop_x: float) -> list[Trade]:
+    """TOS Indicators, MOG-DbgmzzI. First break of the m-minute range by a
+    stop order; target and stop are multiples of the range width from the
+    entry; flat at the close. Fixed here: entries by 12:00."""
+    out = []
+    for k in range(len(days)):
+        hi, lo = days.h[k, :m].max(), days.l[k, :m].min()
+        w = hi - lo
+        if w <= days.tick * 4:
+            continue
+        f = _first_touch(days, k, m, 150, hi + days.tick, lo - days.tick)
+        if f is None:
+            continue
+        i, d, px = f
+        out.append(
+            Trade(k, i, d, px, _const(px - d * stop_x * w), px + d * target_x * w, stop_entry=True)
+        )
+    return out
+
+
+def orb_fvg(days: Days) -> list[Trade]:
+    """Jesse Rogers (Casper), mzFXoK2pbNE. 5-minute range 09:30-09:35. The
+    first 1-minute close beyond it is the break candle. A fair value gap in
+    the break direction on that candle or the next two (candle-3 wick past
+    candle-1 wick) enters at the open after candle 3. Stop at the break
+    candle's far extreme, target 2R. Fixed here: break by 10:30, no FVG in
+    those three candles means no trade."""
+    out = []
+    h, l, c = days.h, days.l, days.c  # noqa: E741
+    for k in range(len(days)):
+        hi, lo = h[k, :5].max(), l[k, :5].min()
+        brk = None
+        for j in range(5, 60):
+            if c[k, j] > hi or c[k, j] < lo:
+                brk = j
+                break
+        if brk is None:
+            continue
+        d = 1 if c[k, brk] > hi else -1
+        for j3 in range(max(brk, 7), brk + 3):
+            gap = (l[k, j3] > h[k, j3 - 2]) if d > 0 else (h[k, j3] < l[k, j3 - 2])
+            if gap:
+                i = j3 + 1
+                px = _mkt(days, k, i, d)
+                stop = l[k, brk] if d > 0 else h[k, brk]
+                if (px - stop) * d <= days.tick * 4:
+                    break
+                out.append(Trade(k, i, d, px, _const(stop), px + 2 * d * abs(px - stop)))
+                break
+    return out
+
+
+def youtube_configs() -> list[Config]:
+    """Prop-search 2, pre-registered 2026-11-09: 5 configurations."""
+    return [
+        Config("youtube_orr", "yt_orr_50pct", lambda d: opening_range_reversal(d, 0.5)),
+        Config("youtube_orr", "yt_orr_100pct", lambda d: opening_range_reversal(d, 1.0)),
+        Config("youtube_orb_bracket", "yt_orb5_full_full", lambda d: orb_bracket(d, 5, 1.0, 1.0)),
+        Config("youtube_orb_bracket", "yt_orb5_half_full", lambda d: orb_bracket(d, 5, 0.5, 1.0)),
+        Config("youtube_orb_fvg", "yt_orb5_fvg_2R", orb_fvg),
+    ]

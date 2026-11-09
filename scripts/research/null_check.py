@@ -7,7 +7,7 @@ sys.path.insert(0, "scripts/research")
 import numpy as np
 from evaluate import r_multiples
 from sessions import N_MIN, Days
-from strategies import configs, mirror, simulate
+from strategies import configs, mirror, simulate, youtube_configs
 
 rng = np.random.default_rng(1)
 n = 800
@@ -35,7 +35,7 @@ d = Days(
     0.25,
     2.0,
 )
-for cfg in configs():
+for cfg in configs() + youtube_configs():
     tr = cfg.build(d)
     if len(tr) < 20:
         print(cfg.name, len(tr))

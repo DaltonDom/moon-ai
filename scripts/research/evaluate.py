@@ -31,7 +31,7 @@ sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE.parents[1] / "src"))
 
 from sessions import load  # noqa: E402
-from strategies import COMMISSION_RT, configs, mirror, simulate  # noqa: E402
+from strategies import COMMISSION_RT, configs, mirror, simulate, youtube_configs  # noqa: E402
 
 from moon_ai import holdout  # noqa: E402
 from moon_ai.backtest.stats import deflated_sharpe, sharpe  # noqa: E402
@@ -163,9 +163,16 @@ def research(symbol="MNQ"):
     return rows
 
 
-def signoff(names, symbol="MNQ"):
-    cfgs = {c.name: c for c in configs()}
-    reg = json.loads((OUT / "finalists.json").read_text())
+GROUPS = {  # group: (finalists file, holdout trial label, results suffix)
+    "grid": ("finalists.json", "prop-search-1", ""),
+    "youtube": ("finalists-youtube.json", "prop-search-2", "-youtube"),
+}
+
+
+def signoff(names, symbol="MNQ", group="grid"):
+    reg_file, trial, suffix = GROUPS[group]
+    cfgs = {c.name: c for c in configs() + youtube_configs()}
+    reg = json.loads((OUT / reg_file).read_text())
     registered = set(reg["finalists"])
     for n in names:
         if n not in registered:
@@ -175,7 +182,7 @@ def signoff(names, symbol="MNQ"):
     for i, n in enumerate(names):
         holdout.sign_off(
             n,
-            "prop-search-1",
+            trial,
             holdout.HOLDOUT_START,
             holdout.HOLDOUT_END,
             ledger=OUT / "holdout_checks.jsonl",
@@ -191,7 +198,7 @@ def signoff(names, symbol="MNQ"):
         strategies.ENTRY_SLIP, strategies.STOP_SLIP = saved
         rows.append(row)
         print(json.dumps(row, indent=1))
-    (OUT / f"holdout.{symbol}.json").write_text(
+    (OUT / f"holdout{suffix}.{symbol}.json").write_text(
         json.dumps(
             {
                 "meta": {
@@ -206,8 +213,41 @@ def signoff(names, symbol="MNQ"):
     )
 
 
+def research_youtube(symbol="MNQ"):
+    """Prop-search 2. DSR counts these 5 plus the 24 grid trials before them."""
+    days = load(symbol, date(2019, 6, 1), holdout.HOLDOUT_START)
+    prior = json.loads((OUT / f"research.{symbol}.json").read_text())["rows"]
+    rows, rets = [], []
+    for i, cfg in enumerate(youtube_configs()):
+        row, r = score(days, cfg, seed=500 + i)
+        rows.append(row)
+        rets.append(r)
+        print(cfg.name, row["trades"], flush=True)
+    srs = [p["sharpe_per_trade"] for p in prior] + [sharpe(r) for r in rets]
+    var = float(np.var(srs, ddof=1))
+    for row, r in zip(rows, rets, strict=True):
+        row["dsr"] = float(deflated_sharpe(r, len(srs), var))
+        row["bar"] = bar(row, len(srs))
+        row["passes"] = all(row["bar"].values())
+    meta = {
+        "symbol": symbol,
+        "window": ["2019-06-01", str(holdout.HOLDOUT_START)],
+        "days": len(days),
+        "trials": len(srs),
+        "var_trial_sharpe": var,
+    }
+    (OUT / f"research-youtube.{symbol}.json").write_text(
+        json.dumps({"meta": meta, "rows": rows}, indent=1)
+    )
+    return rows
+
+
 if __name__ == "__main__":
     if sys.argv[1] == "research":
         research(sys.argv[2] if len(sys.argv) > 2 else "MNQ")
+    elif sys.argv[1] == "research-youtube":
+        research_youtube()
     elif sys.argv[1] == "holdout":
         signoff(sys.argv[2:])
+    elif sys.argv[1] == "holdout-youtube":
+        signoff(sys.argv[2:], group="youtube")
