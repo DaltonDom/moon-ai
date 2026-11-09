@@ -326,24 +326,43 @@ def configs() -> list[Config]:
     cs: list[Config] = []
     for m in (5, 15, 30):
         for tr in (None, 2.0):
-            cs.append(Config("orb_candle", f"orb_candle_m{m}_{'eod' if tr is None else '2R'}",
-                             lambda d, m=m, tr=tr: orb_candle(d, m, tr)))
+            cs.append(
+                Config(
+                    "orb_candle",
+                    f"orb_candle_m{m}_{'eod' if tr is None else '2R'}",
+                    lambda d, m=m, tr=tr: orb_candle(d, m, tr),
+                )
+            )
     for m in (15, 30, 60):
         for s in ("opp", "mid"):
-            cs.append(Config("orb_break", f"orb_break_m{m}_{s}",
-                             lambda d, m=m, s=s: orb_break(d, m, s)))
+            cs.append(
+                Config("orb_break", f"orb_break_m{m}_{s}", lambda d, m=m, s=s: orb_break(d, m, s))
+            )
     for mult in (1.0, 1.5):
         for step in (30, 15):
-            cs.append(Config("noise_area", f"noise_area_x{mult}_{step}m",
-                             lambda d, mult=mult, step=step: noise_area(d, mult, step=step)))
+            cs.append(
+                Config(
+                    "noise_area",
+                    f"noise_area_x{mult}_{step}m",
+                    lambda d, mult=mult, step=step: noise_area(d, mult, step=step),
+                )
+            )
     for se in (30, 360):
-        cs.append(Config("intraday_momentum", f"intraday_momentum_to{se}",
-                         lambda d, se=se: intraday_momentum(d, se)))
+        cs.append(
+            Config(
+                "intraday_momentum",
+                f"intraday_momentum_to{se}",
+                lambda d, se=se: intraday_momentum(d, se),
+            )
+        )
     for ka in (0.15, 0.3):
         cs.append(Config("gap_fade", f"gap_fade_k{ka}", lambda d, ka=ka: gap_fade(d, ka)))
     for ka in (0.25, 0.4):
         cs.append(Config("vwap_revert", f"vwap_revert_k{ka}", lambda d, ka=ka: vwap_revert(d, ka)))
     for sf in (0.25, 0.5):
-        cs.append(Config("overnight_break", f"overnight_break_s{sf}",
-                         lambda d, sf=sf: overnight_break(d, sf)))
+        cs.append(
+            Config(
+                "overnight_break", f"overnight_break_s{sf}", lambda d, sf=sf: overnight_break(d, sf)
+            )
+        )
     return cs

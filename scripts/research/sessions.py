@@ -151,5 +151,6 @@ def load(symbol: str, start: date, end: date, *, holdout_run: bool = False) -> D
         prev = (sess, iid, arr)
 
     A = np.array
-    return Days(symbol, A(dates), A(o), A(h), A(l), A(c), A(v), A(pc),
-                A(onh), A(onl), A(onc), tick, pv)
+    return Days(
+        symbol, A(dates), A(o), A(h), A(l), A(c), A(v), A(pc), A(onh), A(onl), A(onc), tick, pv
+    )

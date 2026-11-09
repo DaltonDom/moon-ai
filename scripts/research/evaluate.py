@@ -50,8 +50,10 @@ def r_multiples(res, px, pv):
 
 
 def day_trades(res, pnl_usd, risk_pts, pv):
-    return [DayTrade(r.day, float(p), float(r.mae_pts * pv), float(k * pv))
-            for r, p, k in zip(res, pnl_usd, risk_pts, strict=True)]
+    return [
+        DayTrade(r.day, float(p), float(r.mae_pts * pv), float(k * pv))
+        for r, p, k in zip(res, pnl_usd, risk_pts, strict=True)
+    ]
 
 
 def score(days, cfg, n_trials_hint=None, seed=0):
@@ -76,13 +78,18 @@ def score(days, cfg, n_trials_hint=None, seed=0):
     first, second = r[dates <= mid], r[dates > mid]
 
     out = {
-        "name": cfg.name, "family": cfg.family, "trades": len(r),
-        "win_rate": float((r > 0).mean()), "mean_r": float(r.mean()),
-        "coin_mean_r": float(coin.mean()), "coin_p": float((coin >= r.mean()).mean()),
+        "name": cfg.name,
+        "family": cfg.family,
+        "trades": len(r),
+        "win_rate": float((r > 0).mean()),
+        "mean_r": float(r.mean()),
+        "coin_mean_r": float(coin.mean()),
+        "coin_p": float((coin >= r.mean()).mean()),
         "edge": float(edge.mean()),
         "edge_ci": [float(np.quantile(boots, 0.025)), float(np.quantile(boots, 0.975))],
         "sharpe_per_trade": float(sharpe(r)),
-        "mean_r_first_half": float(first.mean()), "mean_r_second_half": float(second.mean()),
+        "mean_r_first_half": float(first.mean()),
+        "mean_r_second_half": float(second.mean()),
         "usd_per_contract": float(pnl.sum()),
         "exits": {k: int(sum(x.reason == k for x in res)) for k in ("stop", "target", "time")},
     }
@@ -95,11 +102,13 @@ def score(days, cfg, n_trials_hint=None, seed=0):
         for _ in range(N_COIN_PROP):
             side = rng.random(len(dt)) < 0.5
             mix = [a if c else b for a, b, c in zip(dt, dt2, side, strict=True)]
-            coin_rates.append(rolling(acct, mix,
-                                      len(days)).pass_rate)
+            coin_rates.append(rolling(acct, mix, len(days)).pass_rate)
         prop[acct.name] = {
-            "pass_rate": s.pass_rate, "resolved_pass_rate": s.resolved_pass_rate,
-            "passed": s.passed, "failed": s.failed, "open": s.open,
+            "pass_rate": s.pass_rate,
+            "resolved_pass_rate": s.resolved_pass_rate,
+            "passed": s.passed,
+            "failed": s.failed,
+            "open": s.open,
             "median_days_to_pass": s.median_days_to_pass,
             "coin_pass_rate": float(np.mean(coin_rates)),
             "coin_pass_rate_p95": float(np.quantile(coin_rates, 0.95)),
@@ -130,8 +139,11 @@ def research(symbol="MNQ"):
         row, r = score(days, cfg, seed=i)
         rows.append(row)
         rets.append(r)
-        print(f"{cfg.name:32s} n={row['trades']:5d} meanR={row.get('mean_r', 0):+.3f} "
-              f"edgeCI={row.get('edge_ci')}", flush=True)
+        print(
+            f"{cfg.name:32s} n={row['trades']:5d} meanR={row.get('mean_r', 0):+.3f} "
+            f"edgeCI={row.get('edge_ci')}",
+            flush=True,
+        )
     srs = [sharpe(r) for r in rets if r is not None]
     var = float(np.var(srs, ddof=1))
     for row, r in zip(rows, rets, strict=True):
@@ -140,8 +152,13 @@ def research(symbol="MNQ"):
             row["bar"] = bar(row, len(cfgs))
             row["passes"] = all(row["bar"].values())
     OUT.mkdir(parents=True, exist_ok=True)
-    meta = {"symbol": symbol, "window": ["2019-06-01", str(holdout.HOLDOUT_START)],
-            "days": len(days), "trials": len(cfgs), "var_trial_sharpe": var}
+    meta = {
+        "symbol": symbol,
+        "window": ["2019-06-01", str(holdout.HOLDOUT_START)],
+        "days": len(days),
+        "trials": len(cfgs),
+        "var_trial_sharpe": var,
+    }
     (OUT / f"research.{symbol}.json").write_text(json.dumps({"meta": meta, "rows": rows}, indent=1))
     return rows
 
@@ -156,16 +173,30 @@ def signoff(names, symbol="MNQ"):
     days = load(symbol, holdout.HOLDOUT_START, holdout.HOLDOUT_END, holdout_run=True)
     rows = []
     for i, n in enumerate(names):
-        holdout.sign_off(n, "prop-search-1", holdout.HOLDOUT_START, holdout.HOLDOUT_END,
-                         ledger=OUT / "holdout_checks.jsonl")
+        holdout.sign_off(
+            n,
+            "prop-search-1",
+            holdout.HOLDOUT_START,
+            holdout.HOLDOUT_END,
+            ledger=OUT / "holdout_checks.jsonl",
+        )
         row, r = score(days, cfgs[n], seed=100 + i)
         row["dsr_vs_zero"] = float(deflated_sharpe(r, 1, 0.0))  # one look: no deflation
         rows.append(row)
         print(json.dumps(row, indent=1))
     (OUT / f"holdout.{symbol}.json").write_text(
-        json.dumps({"meta": {"symbol": symbol, "days": len(days),
-                             "window": [str(holdout.HOLDOUT_START), str(holdout.HOLDOUT_END)]},
-                    "rows": rows}, indent=1))
+        json.dumps(
+            {
+                "meta": {
+                    "symbol": symbol,
+                    "days": len(days),
+                    "window": [str(holdout.HOLDOUT_START), str(holdout.HOLDOUT_END)],
+                },
+                "rows": rows,
+            },
+            indent=1,
+        )
+    )
 
 
 if __name__ == "__main__":
