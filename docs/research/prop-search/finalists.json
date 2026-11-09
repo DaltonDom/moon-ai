@@ -1,0 +1,18 @@
+{
+ "registered": "2026-11-09, before any holdout bar was loaded",
+ "symbol": "MNQ",
+ "finalists": ["orb_break_m30_opp"],
+ "rules": "30-minute opening range (09:30-09:59 ET). From 10:00 to 11:59, the first trade one tick through the range high (long) or low (short) enters by stop order. Stop at the other side of the range. No target. Flat at 15:59. One trade a day. Bar with both sides broken: no trade.",
+ "accounts": {"Topstep 50K Combine": {"risk_usd": 400, "max_micros": 50}, "LucidFlex 25K": {"risk_usd": 200, "max_micros": 20}},
+ "costs": "$1/side commission, 1 tick entry/exit slippage, 3 ticks on stops; double-slippage run also reported",
+ "holdout_pass": [
+  "mean R > 0 net of costs",
+  "edge over its coin-flip twin > 0",
+  "rolling pass rate above the coin flip's mean pass rate on both accounts",
+  "mean R > 0 under double slippage"
+ ],
+ "holdout_strong_pass": [
+  "coin-flip p < 0.05",
+  "rolling pass rate above the coin flip's 95th percentile on both accounts"
+ ]
+}
